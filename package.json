@@ -1,0 +1,42 @@
+{
+  "name": "proxyfaqs",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "import:paa": "bun run scripts/import-paa.ts",
+    "import:providers": "bun run scripts/import-providers.ts",
+    "import:keywords": "bun run scripts/import-keywords.ts",
+    "import:articles": "bun run scripts/import-articles.ts",
+    "import:all": "bun run import:paa && bun run import:providers && bun run import:keywords",
+    "sitemap": "bun run scripts/build-sitemap.ts",
+    "test": "bun test",
+    "test:unit": "bun test --only",
+    "typecheck": "astro check",
+    "deploy": "wrangler pages deploy dist --project-name proxyfaqs",
+    "deploy:preview": "wrangler pages deploy dist --project-name proxyfaqs --branch preview",
+    "security-check": "bash scripts/security-check.sh",
+    "setup:github": "bash scripts/setup-github.sh",
+    "precommit": "bun run security-check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.0",
+    "@astrojs/sitemap": "^3.2.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "@supabase/supabase-js": "^2.47.0",
+    "@types/pg": "8.16.0",
+    "astro": "^4.16.0",
+    "marked": "^15.0.0",
+    "papaparse": "5.5.3",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "0.5.19",
+    "@types/bun": "^1.1.0",
+    "@types/papaparse": "5.5.2",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.6.0"
+  }
+}

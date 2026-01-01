@@ -1,0 +1,105 @@
+---
+import Base from '@/layouts/Base.astro';
+import ProviderCard from '@/components/ProviderCard.astro';
+import { getProviders } from '@/lib/supabase';
+
+let providers = [];
+
+try {
+  providers = await getProviders();
+} catch (error) {
+  console.error('Error fetching providers:', error);
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Top Proxy Providers',
+  description: 'Compare the best proxy providers for web scraping and data extraction',
+  itemListElement: providers.slice(0, 10).map((provider, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'Product',
+      name: provider.name,
+      description: provider.description,
+      url: `https://proxyfaqs.com/providers/${provider.slug}`,
+      aggregateRating: provider.rating ? {
+        '@type': 'AggregateRating',
+        ratingValue: provider.rating,
+        bestRating: 5,
+      } : undefined,
+    },
+  })),
+};
+---
+
+<Base
+  title="Compare Proxy Providers"
+  description="Compare top proxy providers for web scraping. Find the best residential, datacenter, and mobile proxies with real reviews and pricing data."
+  jsonLd={jsonLd}
+>
+  <div class="bg-secondary-50 min-h-screen">
+    <!-- Header -->
+    <section class="bg-gradient-to-b from-primary-50 to-white py-12">
+      <div class="container-custom">
+        <div class="text-center mb-8">
+          <h1 class="text-3xl md:text-4xl font-bold text-secondary-900 mb-4">
+            Compare Proxy Providers
+          </h1>
+          <p class="text-lg text-secondary-600 max-w-2xl mx-auto">
+            Unbiased reviews and real data. Find the perfect proxy provider for your web scraping needs.
+          </p>
+        </div>
+
+        <!-- Filter Pills (Static for MVP) -->
+        <div class="flex flex-wrap justify-center gap-2">
+          <button class="category-pill bg-primary-100 text-primary-700">All Providers</button>
+          <button class="category-pill">Residential</button>
+          <button class="category-pill">Datacenter</button>
+          <button class="category-pill">Mobile</button>
+          <button class="category-pill">Rotating</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Provider Grid -->
+    <section class="py-8">
+      <div class="container-custom">
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {providers.map((provider) => (
+            <ProviderCard provider={provider} />
+          ))}
+        </div>
+
+        {providers.length === 0 && (
+          <div class="text-center py-12">
+            <div class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h2 class="text-xl font-semibold text-secondary-900 mb-2">No providers found</h2>
+            <p class="text-secondary-600">Provider data is being imported. Check back soon!</p>
+          </div>
+        )}
+      </div>
+    </section>
+
+    <!-- Affiliate Disclosure -->
+    <section class="py-8 bg-white">
+      <div class="container-custom">
+        <div class="max-w-3xl mx-auto text-center">
+          <h2 class="text-xl font-semibold text-secondary-900 mb-4">
+            How We Make Money
+          </h2>
+          <p class="text-secondary-600 text-sm">
+            Some links on this page are affiliate links. This means we may earn a commission if you sign up
+            through our links, at no extra cost to you. This helps us maintain the site and provide
+            unbiased reviews. We only recommend services we've personally tested and believe in.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</Base>

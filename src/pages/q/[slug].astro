@@ -1,0 +1,196 @@
+---
+import Base from '@/layouts/Base.astro';
+import QuestionCard from '@/components/QuestionCard.astro';
+import { getQuestion, getRelatedQuestions, getAllQuestionSlugs } from '@/lib/supabase';
+import { generateFAQSchema, generateBreadcrumbSchema, generateArticleSchema, formatDate } from '@/lib/utils';
+import { marked } from 'marked';
+
+export async function getStaticPaths() {
+  try {
+    const slugs = await getAllQuestionSlugs();
+    return slugs.map((slug) => ({ params: { slug } }));
+  } catch (error) {
+    console.warn('Could not fetch question slugs (database may not be set up yet):', error.message);
+    return [];
+  }
+}
+
+const { slug } = Astro.params;
+
+let question = null;
+let relatedQuestions = [];
+
+try {
+  question = await getQuestion(slug);
+  if (question) {
+    relatedQuestions = await getRelatedQuestions(question, 5);
+  }
+} catch (error) {
+  console.error('Error fetching question:', error);
+}
+
+if (!question) {
+  return Astro.redirect('/404');
+}
+
+const siteUrl = 'https://proxyfaqs.com';
+const pageUrl = `${siteUrl}/q/${slug}`;
+
+// Generate HTML from markdown if answer_html doesn't exist
+const answerHtml = question.answer_html || await marked.parse(question.answer);
+
+// Generate JSON-LD structured data
+const jsonLd = [
+  generateFAQSchema([{ question: question.question, answer: question.answer }]),
+  generateBreadcrumbSchema([
+    { name: 'Home', url: siteUrl },
+    { name: 'Questions', url: `${siteUrl}/q` },
+    { name: question.category, url: `${siteUrl}/category/${question.category_slug}` },
+    { name: question.question.substring(0, 50), url: pageUrl },
+  ]),
+  generateArticleSchema({
+    title: question.question,
+    description: question.meta_description || question.answer.substring(0, 160),
+    url: pageUrl,
+    datePublished: question.created_at,
+    dateModified: question.updated_at,
+  }),
+];
+
+const metaDescription = question.meta_description ||
+  question.answer.replace(/<[^>]*>/g, '').substring(0, 160);
+---
+
+<Base
+  title={question.meta_title || question.question}
+  description={metaDescription}
+  canonicalUrl={pageUrl}
+  jsonLd={jsonLd}
+>
+  <article class="py-8 md:py-12">
+    <div class="container-custom">
+      <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Main Content -->
+        <main class="lg:col-span-2">
+          <!-- Breadcrumbs -->
+          <nav class="mb-6" aria-label="Breadcrumb">
+            <ol class="flex flex-wrap items-center gap-2 text-sm text-secondary-500">
+              <li>
+                <a href="/" class="hover:text-primary-600">Home</a>
+              </li>
+              <li class="flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+                <a href="/q" class="hover:text-primary-600">Questions</a>
+              </li>
+              {question.category && (
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                  <a href={`/category/${question.category_slug}`} class="hover:text-primary-600">
+                    {question.category}
+                  </a>
+                </li>
+              )}
+            </ol>
+          </nav>
+
+          <!-- Question Card -->
+          <div class="card mb-8">
+            <div class="flex items-start gap-4 mb-6">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <span class="category-pill mb-2">
+                  {question.category}
+                </span>
+                <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mt-2">
+                  {question.question}
+                </h1>
+              </div>
+            </div>
+
+            <!-- Answer -->
+            <div class="prose-custom mt-8" set:html={answerHtml} />
+
+            <!-- Meta Info -->
+            <div class="flex flex-wrap items-center gap-4 mt-8 pt-6 border-t border-secondary-200 text-sm text-secondary-500">
+              {question.view_count > 0 && (
+                <span class="flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  {question.view_count.toLocaleString()} views
+                </span>
+              )}
+              <span class="flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Updated {formatDate(question.updated_at)}
+              </span>
+              {question.source_url && (
+                <a
+                  href={question.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-1 text-primary-600 hover:text-primary-700"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Source
+                </a>
+              )}
+            </div>
+          </div>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="lg:col-span-1">
+          <div class="sticky top-24 space-y-6">
+            <!-- Related Questions -->
+            {relatedQuestions.length > 0 && (
+              <div class="card">
+                <h2 class="font-semibold text-secondary-900 mb-4">Related Questions</h2>
+                <div class="space-y-3">
+                  {relatedQuestions.map((related) => (
+                    <a
+                      href={`/q/${related.slug}`}
+                      class="block p-3 rounded-lg hover:bg-secondary-50 transition-colors group"
+                    >
+                      <span class="text-sm text-secondary-700 group-hover:text-primary-600 line-clamp-2">
+                        {related.question}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <!-- CTA Card -->
+            <div class="card bg-gradient-to-br from-primary-50 to-white">
+              <h2 class="font-semibold text-secondary-900 mb-2">Need more help?</h2>
+              <p class="text-sm text-secondary-600 mb-4">
+                Chat with our AI assistant or compare proxy providers.
+              </p>
+              <div class="space-y-2">
+                <a href="/providers" class="btn-primary w-full text-center text-sm">
+                  Compare Providers
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </article>
+</Base>

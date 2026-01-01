@@ -1,0 +1,82 @@
+---
+import Base from '@/layouts/Base.astro';
+import { getCategories } from '@/lib/supabase';
+
+let categories = [];
+
+try {
+  categories = await getCategories();
+} catch (error) {
+  console.error('Error fetching categories:', error);
+}
+
+const totalQuestions = categories.reduce((sum, cat) => sum + (cat.question_count || 0), 0);
+---
+
+<Base
+  title="Browse Categories"
+  description="Explore proxy and web scraping topics by category. Find answers about residential proxies, datacenter proxies, web scraping techniques, and more."
+>
+  <div class="bg-secondary-50 min-h-screen">
+    <!-- Header -->
+    <section class="bg-white border-b border-secondary-200 py-8">
+      <div class="container-custom">
+        <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
+          Browse Categories
+        </h1>
+        <p class="text-secondary-600">
+          Explore {categories.length} categories with {totalQuestions.toLocaleString()}+ questions
+        </p>
+      </div>
+    </section>
+
+    <!-- Categories Grid -->
+    <section class="py-8">
+      <div class="container-custom">
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {categories.map((category) => (
+            <a
+              href={`/category/${category.slug}`}
+              class="card-hover group"
+            >
+              <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center group-hover:from-primary-200 group-hover:to-primary-100 transition-colors">
+                  <svg class="w-7 h-7 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h2 class="font-semibold text-secondary-900 group-hover:text-primary-600 transition-colors mb-1">
+                    {category.name}
+                  </h2>
+                  {category.description && (
+                    <p class="text-sm text-secondary-600 line-clamp-2 mb-2">
+                      {category.description}
+                    </p>
+                  )}
+                  <div class="flex items-center gap-4 text-sm text-secondary-500">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {(category.question_count || 0).toLocaleString()} questions
+                    </span>
+                  </div>
+                </div>
+                <svg class="w-5 h-5 text-secondary-400 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {categories.length === 0 && (
+          <div class="text-center py-12">
+            <p class="text-secondary-600">No categories found.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  </div>
+</Base>

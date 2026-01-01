@@ -1,0 +1,142 @@
+---
+import Base from '@/layouts/Base.astro';
+import QuestionCard from '@/components/QuestionCard.astro';
+import { getCategory, getQuestionsByCategory, getAllCategorySlugs, getCategories } from '@/lib/supabase';
+import { generateBreadcrumbSchema } from '@/lib/utils';
+
+export async function getStaticPaths() {
+  try {
+    const slugs = await getAllCategorySlugs();
+    return slugs.map((slug) => ({ params: { slug } }));
+  } catch (error) {
+    console.warn('Could not fetch category slugs (database may not be set up yet):', error.message);
+    // Return empty array during build if database is not accessible
+    return [];
+  }
+}
+
+const { slug } = Astro.params;
+
+let category = null;
+let questions = [];
+let allCategories = [];
+
+try {
+  [category, questions, allCategories] = await Promise.all([
+    getCategory(slug),
+    getQuestionsByCategory(slug, 100),
+    getCategories(),
+  ]);
+} catch (error) {
+  console.error('Error fetching category:', error);
+}
+
+if (!category) {
+  return Astro.redirect('/404');
+}
+
+const siteUrl = 'https://proxyfaqs.com';
+const pageUrl = `${siteUrl}/category/${slug}`;
+
+const jsonLd = generateBreadcrumbSchema([
+  { name: 'Home', url: siteUrl },
+  { name: 'Categories', url: `${siteUrl}/category` },
+  { name: category.name, url: pageUrl },
+]);
+---
+
+<Base
+  title={`${category.name} Questions`}
+  description={category.description || `Browse ${category.question_count || 0} questions about ${category.name}. Find expert answers about proxies and web scraping.`}
+  canonicalUrl={pageUrl}
+  jsonLd={jsonLd}
+>
+  <div class="bg-secondary-50 min-h-screen">
+    <!-- Header -->
+    <section class="bg-white border-b border-secondary-200 py-8">
+      <div class="container-custom">
+        <!-- Breadcrumbs -->
+        <nav class="mb-4" aria-label="Breadcrumb">
+          <ol class="flex items-center gap-2 text-sm text-secondary-500">
+            <li>
+              <a href="/" class="hover:text-primary-600">Home</a>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+              <a href="/category" class="hover:text-primary-600">Categories</a>
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+              <span class="text-secondary-900">{category.name}</span>
+            </li>
+          </ol>
+        </nav>
+
+        <div class="flex items-start gap-4">
+          <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
+            <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-2">
+              {category.name}
+            </h1>
+            {category.description && (
+              <p class="text-secondary-600 mb-2">{category.description}</p>
+            )}
+            <p class="text-sm text-secondary-500">
+              {(category.question_count || 0).toLocaleString()} questions
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Content -->
+    <section class="py-8">
+      <div class="container-custom">
+        <div class="grid lg:grid-cols-4 gap-8">
+          <!-- Sidebar -->
+          <aside class="lg:col-span-1 order-2 lg:order-1">
+            <div class="sticky top-24">
+              <h2 class="font-semibold text-secondary-900 mb-4">Other Categories</h2>
+              <nav class="space-y-2">
+                {allCategories.filter(c => c.slug !== slug).slice(0, 10).map((cat) => (
+                  <a
+                    href={`/category/${cat.slug}`}
+                    class="block px-3 py-2 rounded-lg text-sm text-secondary-600 hover:bg-white hover:text-primary-600 transition-colors"
+                  >
+                    {cat.name}
+                    <span class="text-secondary-400 ml-1">
+                      ({(cat.question_count || 0).toLocaleString()})
+                    </span>
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          <!-- Questions -->
+          <main class="lg:col-span-3 order-1 lg:order-2">
+            <div class="grid gap-4">
+              {questions.map((question) => (
+                <QuestionCard question={question} showCategory={false} />
+              ))}
+            </div>
+
+            {questions.length === 0 && (
+              <div class="text-center py-12">
+                <p class="text-secondary-600">No questions found in this category.</p>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    </section>
+  </div>
+</Base>

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.astro/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+
+# Test coverage
+coverage/
+
+# Cloudflare
+.wrangler/
+wrangler.toml
+
+# Secrets and sensitive files
+*.key
+*.pem
+SECRETS.txt
+deploy-now.sh
+scripts/setup-github.sh

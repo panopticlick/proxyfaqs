@@ -1,0 +1,14 @@
+# ProxyFAQs - robots.txt
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://proxyfaqs.com/sitemap-index.xml
+
+# Disallow API endpoints
+Disallow: /api/
+
+# Disallow admin/internal pages
+Disallow: /admin/
+Disallow: /_/

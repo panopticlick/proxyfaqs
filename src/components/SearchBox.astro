@@ -1,0 +1,138 @@
+---
+export interface Props {
+  size?: 'sm' | 'md' | 'lg';
+  placeholder?: string;
+  autofocus?: boolean;
+  initialValue?: string;
+}
+
+const {
+  size = 'md',
+  placeholder = 'Search proxies, web scraping, and more...',
+  autofocus = false,
+  initialValue = '',
+} = Astro.props;
+
+const sizeClasses = {
+  sm: 'py-2 px-4 text-sm',
+  md: 'py-3 px-5 text-base',
+  lg: 'py-4 px-6 text-lg',
+};
+
+const iconSizes = {
+  sm: 'w-4 h-4',
+  md: 'w-5 h-5',
+  lg: 'w-6 h-6',
+};
+---
+
+<form action="/search" method="get" class="search-form relative">
+  <div class="relative">
+    <svg
+      class:list={['absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400', iconSizes[size]]}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+    <input
+      type="search"
+      name="q"
+      value={initialValue}
+      placeholder={placeholder}
+      class:list={[
+        'w-full bg-white border border-secondary-300 rounded-xl pl-12 pr-4 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+        sizeClasses[size],
+      ]}
+      autocomplete="off"
+      autofocus={autofocus}
+      aria-label="Search"
+    />
+    <button
+      type="submit"
+      class="absolute right-2 top-1/2 -translate-y-1/2 btn-primary !py-2 !px-4"
+      aria-label="Submit search"
+    >
+      Search
+    </button>
+  </div>
+
+  <!-- Search suggestions dropdown -->
+  <div class="search-suggestions hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-secondary-200 z-50 overflow-hidden">
+    <div class="p-2">
+      <div class="suggestions-list"></div>
+      <div class="px-3 py-2 text-xs text-secondary-500 border-t border-secondary-100 mt-2">
+        Popular: residential proxy, web scraping, rotating proxies
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+  const searchForms = document.querySelectorAll('.search-form');
+
+  searchForms.forEach((form) => {
+    const input = form.querySelector('input[type="search"]') as HTMLInputElement;
+    const suggestions = form.querySelector('.search-suggestions') as HTMLDivElement;
+    const suggestionsList = form.querySelector('.suggestions-list') as HTMLDivElement;
+
+    if (!input || !suggestions) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+
+      debounceTimer = setTimeout(async () => {
+        const query = input.value.trim();
+
+        if (query.length < 2) {
+          suggestions.classList.add('hidden');
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5`);
+          const data = await res.json();
+
+          if (data.results && data.results.length > 0) {
+            suggestionsList.innerHTML = data.results
+              .map(
+                (item: { slug: string; question: string }) => `
+              <a href="/q/${item.slug}" class="block px-3 py-2 rounded-lg hover:bg-secondary-50 transition-colors">
+                <span class="text-sm text-secondary-900">${item.question}</span>
+              </a>
+            `
+              )
+              .join('');
+            suggestions.classList.remove('hidden');
+          } else {
+            suggestions.classList.add('hidden');
+          }
+        } catch {
+          suggestions.classList.add('hidden');
+        }
+      }, 200);
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!form.contains(e.target as Node)) {
+        suggestions.classList.add('hidden');
+      }
+    });
+
+    // Handle keyboard navigation
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        suggestions.classList.add('hidden');
+      }
+    });
+  });
+</script>
