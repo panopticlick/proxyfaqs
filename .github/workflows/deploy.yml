@@ -34,16 +34,8 @@ jobs:
           echo "SITE_URL=${{ secrets.SITE_URL || 'https://proxyfaqs.com' }}" >> $GITHUB_ENV
           echo "PUBLIC_SITE_URL=${{ secrets.PUBLIC_SITE_URL || 'https://proxyfaqs.com' }}" >> $GITHUB_ENV
 
-      # Database connection for build (optional - only if DB is accessible)
-      - name: Setup database connection
-        if: secrets.DB_HOST != ''
-        run: |
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
-          echo "DB_PORT=${{ secrets.DB_PORT || '5432' }}" >> $GITHUB_ENV
-          echo "DB_NAME=${{ secrets.DB_NAME || 'postgres' }}" >> $GITHUB_ENV
-          echo "DB_USER=${{ secrets.DB_USER || 'postgres' }}" >> $GITHUB_ENV
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
-          echo "DB_SCHEMA=${{ secrets.DB_SCHEMA || 'proxyfaqs' }}" >> $GITHUB_ENV
+      # Database connection for build (optional - skipped for static build)
+      # Static site pre-rendered at build time, no live DB connection needed
 
       - name: Build Astro site
         run: bun run build
