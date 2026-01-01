@@ -36,7 +36,7 @@ jobs:
 
       # Database connection for build (optional - only if DB is accessible)
       - name: Setup database connection
-        if: ${{ secrets.DB_HOST != '' }}
+        if: secrets.DB_HOST != ''
         run: |
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> $GITHUB_ENV
           echo "DB_PORT=${{ secrets.DB_PORT || '5432' }}" >> $GITHUB_ENV
