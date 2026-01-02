@@ -6,7 +6,7 @@
 
 ## 🚀 Features
 
-- **723+ In-depth Articles** - Comprehensive proxy knowledge base
+- **2,807+ In-depth Articles** - Comprehensive proxy knowledge base
 - **8 Categories** - Organized proxy topics
 - **Full-text Search** - PostgreSQL-powered semantic search
 - **SEO Optimized** - Meta tags, sitemaps, and structured data
@@ -17,16 +17,16 @@
 
 | Category            | Articles | Coverage |
 | ------------------- | -------- | -------- |
-| Scraper API         | 285      | 39.4%    |
-| Residential Proxies | 188      | 26.0%    |
-| Proxy Basics        | 169      | 23.4%    |
-| Mobile Proxies      | 33       | 4.6%     |
-| Troubleshooting     | 25       | 3.5%     |
-| Proxy Types         | 12       | 1.7%     |
-| Proxy Providers     | 10       | 1.4%     |
-| Datacenter Proxies  | 1        | 0.1%     |
+| Scraper API         | 1,194    | 42.5%    |
+| Proxy Basics        | 880      | 31.3%    |
+| Residential Proxies | 577      | 20.6%    |
+| Troubleshooting     | 72       | 2.6%     |
+| Mobile Proxies      | 50       | 1.8%     |
+| Proxy Providers     | 19       | 0.7%     |
+| Proxy Types         | 13       | 0.5%     |
+| Datacenter Proxies  | 2        | 0.1%     |
 
-**Total**: 723 articles | **Average**: ~1,250 words/article
+**Total**: 2,807 articles | **Average**: ~1,500 words/article
 
 ## 🛠️ Tech Stack
 
@@ -111,7 +111,7 @@ front/
 ├── src/
 │   ├── pages/              # File-based routing
 │   │   ├── index.astro     # Homepage
-│   │   ├── q/[slug].astro  # Question pages (723+)
+│   │   ├── q/[slug].astro  # Question pages (2,807+)
 │   │   ├── category/       # Category pages
 │   │   └── api/            # Search & chat endpoints
 │   ├── components/         # Astro components
@@ -148,7 +148,7 @@ PUBLIC_SITE_URL=https://proxyfaqs.com
 -- All tables in proxyfaqs schema
 CREATE SCHEMA IF NOT EXISTS proxyfaqs;
 
--- Main questions table (723 rows)
+-- Main questions table (2,807 rows)
 CREATE TABLE proxyfaqs.questions (
   id UUID PRIMARY KEY,
   slug TEXT UNIQUE,
@@ -169,7 +169,7 @@ CREATE TABLE proxyfaqs.keywords (...);
 
 ## 📈 Performance
 
-- **Build Time**: ~2 minutes (723 static pages)
+- **Build Time**: ~5 minutes (2,807 static pages)
 - **Bundle Size**: < 100KB (gzipped)
 - **Lighthouse Score**: 95+ (all metrics)
 - **First Contentful Paint**: < 1s
