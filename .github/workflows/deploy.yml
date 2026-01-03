@@ -22,11 +22,9 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        working-directory: ./front
         run: bun install --frozen-lockfile
 
       - name: Build
-        working-directory: ./front
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
@@ -39,4 +37,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy front/dist --project-name=proxyfaqs
+          command: pages deploy dist --project-name=proxyfaqs
