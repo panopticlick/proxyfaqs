@@ -9,10 +9,11 @@
  * We use direct REST API calls for SSG compatibility.
  */
 
+import { env } from "./env";
+
 // Database configuration
-const supabaseUrl =
-  import.meta.env.PUBLIC_SUPABASE_URL || "http://localhost:54321";
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseUrl = env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = env.PUBLIC_SUPABASE_ANON_KEY;
 
 // Type definitions for database tables
 export interface Category {
@@ -88,10 +89,15 @@ async function supabaseRest<T>(
     select?: string;
     eq?: Record<string, string>;
     neq?: Record<string, string>;
+    ilike?: Record<string, string>;
     order?: { column: string; ascending?: boolean };
     limit?: number;
     offset?: number;
-    textSearch?: { column: string; query: string };
+    textSearch?: {
+      column: string;
+      query: string;
+      type?: "plain" | "phrase" | "websearch" | "tsquery";
+    };
     count?: boolean;
     head?: boolean;
   } = {},
@@ -122,11 +128,28 @@ async function supabaseRest<T>(
       }
     }
 
+    // ILIKE filters
+    if (options.ilike) {
+      for (const [key, value] of Object.entries(options.ilike)) {
+        url.searchParams.set(key, `ilike.${value}`);
+      }
+    }
+
     // Text search
     if (options.textSearch) {
+      const searchType = options.textSearch.type || "plain";
+      const operator =
+        searchType === "websearch"
+          ? "wfts"
+          : searchType === "phrase"
+            ? "phfts"
+            : searchType === "tsquery"
+              ? "fts"
+              : "plfts";
+
       url.searchParams.set(
         options.textSearch.column,
-        `fts.${options.textSearch.query}`,
+        `${operator}.${options.textSearch.query}`,
       );
     }
 
@@ -203,6 +226,19 @@ async function supabaseRest<T>(
   }
 }
 
+function normalizeSearchQuery(input: string): string {
+  const MAX_TERMS = 8;
+  return input
+    .toLowerCase()
+    .replace(/[^\w\s-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, MAX_TERMS)
+    .join(" ");
+}
+
 // Query helpers - using direct REST API calls
 export async function getCategories(): Promise<Category[]> {
   const result = await supabaseRest<Category>("categories", {
@@ -253,11 +289,59 @@ export async function getQuestion(slug: string): Promise<Question | null> {
   return result.data?.[0] || null;
 }
 
+/**
+ * Get related questions using keyword-based similarity search.
+ * Strategy:
+ * 1. Extract keywords from the question title
+ * 2. Use full-text search to find semantically similar questions
+ * 3. Fallback to same-category popular questions if needed
+ */
 export async function getRelatedQuestions(
   question: Question,
   limit = 5,
 ): Promise<Question[]> {
-  const result = await supabaseRest<Question>("questions", {
+  // Extract meaningful keywords from the question (remove stop words)
+  const stopWords = new Set([
+    "what", "how", "why", "when", "where", "which", "who", "is", "are", "do",
+    "does", "can", "could", "should", "would", "the", "a", "an", "in", "on",
+    "at", "to", "for", "of", "with", "and", "or", "but", "not", "be", "have",
+    "has", "was", "were", "been", "being", "will", "your", "you", "i", "my",
+    "it", "its", "this", "that", "these", "those", "there", "here", "from",
+    "about", "into", "through", "during", "before", "after", "above", "below",
+  ]);
+
+  const keywords = question.question
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopWords.has(word))
+    .slice(0, 6); // Take top 6 keywords
+
+  if (keywords.length > 0) {
+    // Use OR-based full-text search for better recall
+    const searchQuery = keywords.join(" | ");
+
+    const result = await supabaseRest<Question>("questions", {
+      select: "*",
+      neq: { id: question.id },
+      textSearch: { column: "search_vector", query: searchQuery, type: "plain" },
+      limit: limit + 5, // Get extra to filter
+    });
+
+    if (!result.error && result.data && result.data.length > 0) {
+      // Prefer questions from same category, then by view count
+      const sorted = result.data.sort((a, b) => {
+        const aSameCategory = a.category === question.category ? 1 : 0;
+        const bSameCategory = b.category === question.category ? 1 : 0;
+        if (aSameCategory !== bSameCategory) return bSameCategory - aSameCategory;
+        return (b.view_count || 0) - (a.view_count || 0);
+      });
+      return sorted.slice(0, limit);
+    }
+  }
+
+  // Fallback: same category popular questions
+  const fallback = await supabaseRest<Question>("questions", {
     select: "*",
     eq: { category: question.category },
     neq: { id: question.id },
@@ -265,22 +349,52 @@ export async function getRelatedQuestions(
     limit,
   });
 
-  if (result.error) throw result.error;
-  return result.data || [];
+  if (fallback.error) throw fallback.error;
+  return fallback.data || [];
 }
 
 export async function searchQuestions(
   query: string,
   limit = 20,
 ): Promise<Question[]> {
+  const normalized = normalizeSearchQuery(query);
+  if (!normalized) return [];
+
   const result = await supabaseRest<Question>("questions", {
     select: "*",
-    textSearch: { column: "search_vector", query },
+    textSearch: { column: "search_vector", query: normalized, type: "plain" },
     limit,
   });
 
   if (result.error) throw result.error;
   return result.data || [];
+}
+
+export async function searchQuestionsWithFallback(
+  query: string,
+  limit = 20,
+): Promise<{ results: Question[]; fallback: boolean }> {
+  const normalized = normalizeSearchQuery(query);
+  if (!normalized) return { results: [], fallback: false };
+
+  const primary = await supabaseRest<Question>("questions", {
+    select: "id, slug, question, answer, category, view_count",
+    textSearch: { column: "search_vector", query: normalized, type: "plain" },
+    limit,
+  });
+
+  if (!primary.error) {
+    return { results: primary.data || [], fallback: false };
+  }
+
+  const fallback = await supabaseRest<Question>("questions", {
+    select: "id, slug, question, answer, category, view_count",
+    ilike: { question: `%${normalized}%` },
+    limit,
+  });
+
+  if (fallback.error) throw fallback.error;
+  return { results: fallback.data || [], fallback: true };
 }
 
 export async function getProviders(): Promise<Provider[]> {
