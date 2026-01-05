@@ -1,22 +1,23 @@
 ---
-import Base from '@/layouts/Base.astro';
-import { getProvider, getAllProviderSlugs, getProviders } from '@/lib/supabase';
-import { generateBreadcrumbSchema } from '@/lib/utils';
+import Base from '../../layouts/Base.astro';
+import { getProvider, getAllProviderSlugs, getProviders, type Provider } from '../../lib/supabase';
+import { generateBreadcrumbSchema } from '../../lib/utils';
 
 export async function getStaticPaths() {
   try {
     const slugs = await getAllProviderSlugs();
     return slugs.map((slug) => ({ params: { slug } }));
   } catch (error) {
-    console.warn('Could not fetch provider slugs (database may not be set up yet):', error.message);
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('Could not fetch provider slugs (database may not be set up yet):', message);
     return [];
   }
 }
 
 const { slug } = Astro.params;
 
-let provider = null;
-let otherProviders = [];
+let provider: Provider | null = null;
+let otherProviders: Provider[] = [];
 
 try {
   [provider, otherProviders] = await Promise.all([
@@ -77,6 +78,7 @@ const jsonLd = [
   description={provider.description || `Read our in-depth review of ${provider.name}. Compare features, pricing, pros and cons.`}
   canonicalUrl={pageUrl}
   jsonLd={jsonLd}
+  noindex={true}
 >
   <article class="py-8 md:py-12">
     <div class="container-custom">
