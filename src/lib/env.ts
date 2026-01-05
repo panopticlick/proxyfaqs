@@ -31,14 +31,17 @@ const envSchema = z
       .url()
       .default("https://api.vectorengine.ai"),
 
+    OPENROUTER_API_KEY: z.string().default(""),
+    OPENROUTER_MODEL: z.string().default("meta-llama/llama-3.3-70b-instruct:free"),
+
     DB_HOST: z.string().default("supabase-db"),
     DB_PORT: z.coerce.number().int().positive().default(5432),
     DB_PASSWORD: z.string().default(""),
 
     PSEO_LIMIT: z.coerce.number().int().nonnegative().default(0),
+    QUESTION_LIMIT: z.coerce.number().int().nonnegative().default(0),
     SITEMAP_QUESTION_LIMIT: z.coerce.number().int().positive().default(50000),
   })
   .passthrough();
 
 export const env = envSchema.parse(getRawEnv());
-

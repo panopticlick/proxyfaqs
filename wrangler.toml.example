@@ -1,39 +1,23 @@
-# Cloudflare Pages Configuration Template
-# Copy this file to wrangler.toml and fill in your actual values
-# NEVER commit wrangler.toml to git!
+# Wrangler Configuration Template for ProxyFAQs
+# Copy this file to wrangler.toml and fill in your values
+# DO NOT commit wrangler.toml to git!
 
 name = "proxyfaqs"
-compatibility_date = "2024-01-01"
-
-# Pages configuration
+compatibility_date = "2024-12-01"
 pages_build_output_dir = "dist"
 
-# Environment variables (set in Cloudflare dashboard or via wrangler secret)
-# DO NOT put sensitive values here - use environment variables instead
-[env.production]
-# Database connection (set via environment variables)
-# DB_HOST = "your-db-host"
-# DB_PORT = "5432"
-# DB_NAME = "postgres"
-# DB_USER = "postgres"
-# DB_PASSWORD = "your-password"
-# DB_SCHEMA = "proxyfaqs"
+# Account ID - set via environment variable CLOUDFLARE_ACCOUNT_ID
+# or uncomment and fill in below (not recommended for public repos)
+# account_id = "your-account-id-here"
 
-[env.production.vars]
-SITE_URL = "https://proxyfaqs.com"
-PUBLIC_SITE_URL = "https://proxyfaqs.com"
+# Environment variables for the Pages Function
+# These should be set via wrangler secret or Cloudflare dashboard
+# Required secrets:
+#   - OPENROUTER_API_KEY
+#   - SUPABASE_SERVICE_KEY
+#
+# Optional:
+#   - OPENROUTER_MODEL (default: meta-llama/llama-3.3-70b-instruct:free)
 
-# Preview environment
-[env.preview]
-[env.preview.vars]
-SITE_URL = "https://preview-proxyfaqs.pages.dev"
-PUBLIC_SITE_URL = "https://preview-proxyfaqs.pages.dev"
-
-# Build configuration
-[build]
-command = "bun run build"
-cwd = ""
-watch_dir = "src"
-
-[build.upload]
-format = "service-worker"
+[vars]
+OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free"

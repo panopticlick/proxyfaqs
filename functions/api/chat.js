@@ -1,35 +1,3 @@
-/**
- * Chat API Endpoint
- *
- * Proxies chat requests to OpenRouter API (free models) or VectorEngine fallback.
- * Uses google/gemini-2.0-flash-exp:free for quick responses.
- *
- * IMPORTANT: In production, this should be deployed as a Cloudflare Worker
- * to protect the API key. For local development, we use this endpoint.
- */
-
-import type { APIRoute } from "astro";
-
-import { env } from "../../lib/env";
-
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-
-// Helper to get env vars at runtime (for Cloudflare Pages)
-function getEnvVar(
-  locals: App.Locals,
-  name: string,
-  fallback: string = "",
-): string {
-  // Try Cloudflare runtime env first
-  const runtime = (locals as { runtime?: { env?: Record<string, string> } })
-    .runtime;
-  if (runtime?.env?.[name]) {
-    return runtime.env[name];
-  }
-  // Fall back to build-time env
-  return (env as Record<string, string>)[name] || fallback;
-}
-
 const SYSTEM_PROMPT = `You are a proxy expert with 10+ years of experience in web scraping and data extraction. You have personally tested BrightData, Soax, Smartproxy, Proxy-Cheap, and Proxy-Seller.
 
 Your expertise includes:
@@ -120,7 +88,7 @@ const AFFILIATE_PROVIDERS = {
   ],
 };
 
-function inferProxyType(text: string) {
+function inferProxyType(text) {
   const normalized = text.toLowerCase();
   if (
     normalized.includes("mobile") ||
@@ -147,7 +115,7 @@ function inferProxyType(text: string) {
   return "residential";
 }
 
-function buildRecommendationContext(message: string, pageContext?: string) {
+function buildRecommendationContext(message, pageContext) {
   const contextText = `${message} ${pageContext || ""}`;
   const proxyType = inferProxyType(contextText);
   const providerList =
@@ -162,51 +130,51 @@ function buildRecommendationContext(message: string, pageContext?: string) {
   return `Recommended proxy type: ${proxyType}. When suggesting providers, use these affiliate links and disclose affiliate status:\n${providerLines}`;
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  try {
-    const { message, sessionId, pageContext } = await request.json();
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
+  });
+}
 
-    if (!message || !message.trim()) {
-      return new Response(JSON.stringify({ error: "Message is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
+export async function onRequestPost(context) {
+  try {
+    const { request, env } = context;
+    const body = await request.json();
+    const message = typeof body.message === "string" ? body.message.trim() : "";
+    const sessionId = body.sessionId || "";
+    const pageContext = body.pageContext || "";
+
+    if (!message) {
+      return jsonResponse({ error: "Message is required" }, 400);
+    }
+
+    // OpenRouter (primary - free models)
+    const openrouterKey = env.OPENROUTER_API_KEY || "";
+    const openrouterModel =
+      env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+
+    // VectorEngine (fallback)
+    const vectorengineKey = env.VECTORENGINE_API_KEY || "";
+    const vectorengineUrl =
+      env.VECTORENGINE_BASE_URL || "https://api.vectorengine.ai";
+
+    const useOpenRouter = !!openrouterKey;
+    const useVectorEngine = !useOpenRouter && !!vectorengineKey;
+
+    if (!useOpenRouter && !useVectorEngine) {
+      return jsonResponse({
+        response:
+          "I'm your proxy assistant! For the best experience, please ensure the API is configured. In the meantime, you can browse our FAQ pages or compare providers.",
+        sessionId,
       });
     }
 
-    // Get env vars at runtime (works on Cloudflare Pages)
-    const OPENROUTER_API_KEY = getEnvVar(locals, "OPENROUTER_API_KEY");
-    const OPENROUTER_MODEL = getEnvVar(
-      locals,
-      "OPENROUTER_MODEL",
-      "google/gemini-2.0-flash-exp:free",
-    );
-    const VECTORENGINE_API_KEY = getEnvVar(locals, "VECTORENGINE_API_KEY");
-    const VECTORENGINE_BASE_URL = getEnvVar(
-      locals,
-      "VECTORENGINE_BASE_URL",
-      "https://api.vectorengine.ai",
-    );
-
-    // Check for available API key (OpenRouter first, VectorEngine fallback)
-    const useOpenRouter = !!OPENROUTER_API_KEY;
-    const useVectorEngine = !useOpenRouter && !!VECTORENGINE_API_KEY;
-
-    if (!useOpenRouter && !useVectorEngine) {
-      // Return a helpful fallback response when no API key is configured
-      return new Response(
-        JSON.stringify({
-          response:
-            "I'm your proxy assistant! For the best experience, please ensure the API is configured. In the meantime, you can browse our FAQ pages or compare providers.",
-          sessionId,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // Build messages array
     const messages = [{ role: "system", content: SYSTEM_PROMPT }];
 
-    // Add page context if available
     if (pageContext) {
       messages.push({
         role: "system",
@@ -221,17 +189,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     messages.push({ role: "user", content: message });
 
-    // Call API (OpenRouter primary, VectorEngine fallback)
+    // Build API request
     const apiUrl = useOpenRouter
-      ? `${OPENROUTER_BASE_URL}/chat/completions`
-      : `${VECTORENGINE_BASE_URL}/v1/chat/completions`;
+      ? "https://openrouter.ai/api/v1/chat/completions"
+      : `${vectorengineUrl}/v1/chat/completions`;
 
-    const apiKey = useOpenRouter ? OPENROUTER_API_KEY : VECTORENGINE_API_KEY;
-    const model = useOpenRouter
-      ? OPENROUTER_MODEL
-      : "grok-4-fast-non-reasoning";
+    const apiKey = useOpenRouter ? openrouterKey : vectorengineKey;
+    const model = useOpenRouter ? openrouterModel : "grok-4-fast-non-reasoning";
 
-    const headers: Record<string, string> = {
+    const headers = {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     };
@@ -257,14 +223,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const errorText = await response.text();
       console.error("API error:", errorText);
 
-      return new Response(
-        JSON.stringify({
-          response:
-            "I'm having trouble connecting right now. Please try again in a moment, or browse our FAQ pages for answers.",
-          sessionId,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return jsonResponse({
+        response:
+          "I'm having trouble connecting right now. Please try again in a moment, or browse our FAQ pages for answers.",
+        sessionId,
+      });
     }
 
     const data = await response.json();
@@ -272,27 +235,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       data.choices?.[0]?.message?.content ||
       "I apologize, but I could not generate a response.";
 
-    return new Response(
-      JSON.stringify({
-        response: assistantMessage,
-        sessionId,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    return jsonResponse({
+      response: assistantMessage,
+      sessionId,
+    });
   } catch (error) {
     console.error("Chat API error:", error);
-    return new Response(
-      JSON.stringify({
+    return jsonResponse(
+      {
         error: "Failed to process chat request",
         response: "Sorry, something went wrong. Please try again.",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
       },
+      500,
     );
   }
-};
+}
