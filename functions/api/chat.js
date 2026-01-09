@@ -20,70 +20,70 @@ Current page context will be provided to help you give relevant answers.`;
 const AFFILIATE_PROVIDERS = {
   residential: [
     {
-      name: "BrightData",
-      href: "https://get.brightdata.com/luminati-proxy",
-      reason: "enterprise coverage and geo targeting",
+      name: 'BrightData',
+      href: 'https://get.brightdata.com/luminati-proxy',
+      reason: 'enterprise coverage and geo targeting',
     },
     {
-      name: "Soax",
-      href: "https://soax.com/?r=cUgaoF3u",
-      reason: "flexible rotation and residential quality",
+      name: 'Soax',
+      href: 'https://soax.com/?r=cUgaoF3u',
+      reason: 'flexible rotation and residential quality',
     },
     {
-      name: "Smartproxy",
-      href: "https://smartproxy.pxf.io/deals",
-      reason: "balanced pricing and coverage",
+      name: 'Smartproxy',
+      href: 'https://smartproxy.pxf.io/deals',
+      reason: 'balanced pricing and coverage',
     },
   ],
   datacenter: [
     {
-      name: "Proxy-Seller",
-      href: "https://proxy-seller.com/?partner=REVhIGcljl3h0",
-      reason: "fast datacenter IPs with stable uptime",
+      name: 'Proxy-Seller',
+      href: 'https://proxy-seller.com/?partner=REVhIGcljl3h0',
+      reason: 'fast datacenter IPs with stable uptime',
     },
     {
-      name: "Webshare",
-      href: "https://proxy.webshare.io/register/?referral_code=xn5m7d467sbh",
-      reason: "cost-effective datacenter pools",
+      name: 'Webshare',
+      href: 'https://proxy.webshare.io/register/?referral_code=xn5m7d467sbh',
+      reason: 'cost-effective datacenter pools',
     },
     {
-      name: "Rayobyte",
-      href: "https://billing.rayobyte.com/hosting/aff.php?aff=455&to=http://rayobyte.com/",
-      reason: "reliable datacenter infrastructure",
+      name: 'Rayobyte',
+      href: 'https://billing.rayobyte.com/hosting/aff.php?aff=455&to=http://rayobyte.com/',
+      reason: 'reliable datacenter infrastructure',
     },
   ],
   mobile: [
     {
-      name: "TheSocialProxy",
-      href: "https://thesocialproxy.com/?ref=privateproxyreviews@gmail.com",
-      reason: "mobile IPs for social automation",
+      name: 'TheSocialProxy',
+      href: 'https://thesocialproxy.com/?ref=privateproxyreviews@gmail.com',
+      reason: 'mobile IPs for social automation',
     },
     {
-      name: "Proxy-Cheap",
-      href: "https://app.proxy-cheap.com/r/mRP1Si",
-      reason: "budget-friendly mobile options",
+      name: 'Proxy-Cheap',
+      href: 'https://app.proxy-cheap.com/r/mRP1Si',
+      reason: 'budget-friendly mobile options',
     },
     {
-      name: "Soax",
-      href: "https://soax.com/?r=cUgaoF3u",
-      reason: "flexible mobile rotation control",
+      name: 'Soax',
+      href: 'https://soax.com/?r=cUgaoF3u',
+      reason: 'flexible mobile rotation control',
     },
   ],
   scraping: [
     {
-      name: "BrightData",
-      href: "https://get.brightdata.com/luminati-proxy",
-      reason: "strong anti-bot resilience",
+      name: 'BrightData',
+      href: 'https://get.brightdata.com/luminati-proxy',
+      reason: 'strong anti-bot resilience',
     },
     {
-      name: "Smartproxy",
-      href: "https://smartproxy.pxf.io/deals",
-      reason: "good coverage and straightforward setup",
+      name: 'Smartproxy',
+      href: 'https://smartproxy.pxf.io/deals',
+      reason: 'good coverage and straightforward setup',
     },
     {
-      name: "Soax",
-      href: "https://soax.com/?r=cUgaoF3u",
-      reason: "stable pool and flexible session control",
+      name: 'Soax',
+      href: 'https://soax.com/?r=cUgaoF3u',
+      reason: 'stable pool and flexible session control',
     },
   ],
 };
@@ -91,41 +91,35 @@ const AFFILIATE_PROVIDERS = {
 function inferProxyType(text) {
   const normalized = text.toLowerCase();
   if (
-    normalized.includes("mobile") ||
-    normalized.includes("instagram") ||
-    normalized.includes("tiktok") ||
-    normalized.includes("social")
+    normalized.includes('mobile') ||
+    normalized.includes('instagram') ||
+    normalized.includes('tiktok') ||
+    normalized.includes('social')
   ) {
-    return "mobile";
+    return 'mobile';
   }
   if (
-    normalized.includes("datacenter") ||
-    normalized.includes("data center") ||
-    normalized.includes("cheap") ||
-    normalized.includes("bulk")
+    normalized.includes('datacenter') ||
+    normalized.includes('data center') ||
+    normalized.includes('cheap') ||
+    normalized.includes('bulk')
   ) {
-    return "datacenter";
+    return 'datacenter';
   }
-  if (
-    normalized.includes("scraper api") ||
-    normalized.includes("scraping api")
-  ) {
-    return "scraping";
+  if (normalized.includes('scraper api') || normalized.includes('scraping api')) {
+    return 'scraping';
   }
-  return "residential";
+  return 'residential';
 }
 
 function buildRecommendationContext(message, pageContext) {
-  const contextText = `${message} ${pageContext || ""}`;
+  const contextText = `${message} ${pageContext || ''}`;
   const proxyType = inferProxyType(contextText);
-  const providerList =
-    AFFILIATE_PROVIDERS[proxyType] || AFFILIATE_PROVIDERS.residential;
+  const providerList = AFFILIATE_PROVIDERS[proxyType] || AFFILIATE_PROVIDERS.residential;
 
   const providerLines = providerList
-    .map(
-      (provider) => `- ${provider.name}: ${provider.href} (${provider.reason})`,
-    )
-    .join("\n");
+    .map((provider) => `- ${provider.name}: ${provider.href} (${provider.reason})`)
+    .join('\n');
 
   return `Recommended proxy type: ${proxyType}. When suggesting providers, use these affiliate links and disclose affiliate status:\n${providerLines}`;
 }
@@ -134,8 +128,8 @@ function jsonResponse(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
     },
   });
 }
@@ -144,23 +138,21 @@ export async function onRequestPost(context) {
   try {
     const { request, env } = context;
     const body = await request.json();
-    const message = typeof body.message === "string" ? body.message.trim() : "";
-    const sessionId = body.sessionId || "";
-    const pageContext = body.pageContext || "";
+    const message = typeof body.message === 'string' ? body.message.trim() : '';
+    const sessionId = body.sessionId || '';
+    const pageContext = body.pageContext || '';
 
     if (!message) {
-      return jsonResponse({ error: "Message is required" }, 400);
+      return jsonResponse({ error: 'Message is required' }, 400);
     }
 
     // OpenRouter (primary - free models)
-    const openrouterKey = env.OPENROUTER_API_KEY || "";
-    const openrouterModel =
-      env.OPENROUTER_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+    const openrouterKey = env.OPENROUTER_API_KEY || '';
+    const openrouterModel = env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
 
     // VectorEngine (fallback)
-    const vectorengineKey = env.VECTORENGINE_API_KEY || "";
-    const vectorengineUrl =
-      env.VECTORENGINE_BASE_URL || "https://api.vectorengine.ai";
+    const vectorengineKey = env.VECTORENGINE_API_KEY || '';
+    const vectorengineUrl = env.VECTORENGINE_BASE_URL || 'https://api.vectorengine.ai';
 
     const useOpenRouter = !!openrouterKey;
     const useVectorEngine = !useOpenRouter && !!vectorengineKey;
@@ -173,43 +165,43 @@ export async function onRequestPost(context) {
       });
     }
 
-    const messages = [{ role: "system", content: SYSTEM_PROMPT }];
+    const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
 
     if (pageContext) {
       messages.push({
-        role: "system",
+        role: 'system',
         content: `The user is currently viewing: ${pageContext}`,
       });
     }
 
     messages.push({
-      role: "system",
+      role: 'system',
       content: buildRecommendationContext(message, pageContext),
     });
 
-    messages.push({ role: "user", content: message });
+    messages.push({ role: 'user', content: message });
 
     // Build API request
     const apiUrl = useOpenRouter
-      ? "https://openrouter.ai/api/v1/chat/completions"
+      ? 'https://openrouter.ai/api/v1/chat/completions'
       : `${vectorengineUrl}/v1/chat/completions`;
 
     const apiKey = useOpenRouter ? openrouterKey : vectorengineKey;
-    const model = useOpenRouter ? openrouterModel : "grok-4-fast-non-reasoning";
+    const model = useOpenRouter ? openrouterModel : 'grok-4-fast-non-reasoning';
 
     const headers = {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
 
     // OpenRouter requires these headers
     if (useOpenRouter) {
-      headers["HTTP-Referer"] = "https://proxyfaqs.com";
-      headers["X-Title"] = "ProxyFAQs";
+      headers['HTTP-Referer'] = 'https://proxyfaqs.com';
+      headers['X-Title'] = 'ProxyFAQs';
     }
 
     const response = await fetch(apiUrl, {
-      method: "POST",
+      method: 'POST',
       headers,
       body: JSON.stringify({
         model,
@@ -221,7 +213,7 @@ export async function onRequestPost(context) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("API error:", errorText);
+      console.error('API error:', errorText);
 
       return jsonResponse({
         response:
@@ -232,21 +224,20 @@ export async function onRequestPost(context) {
 
     const data = await response.json();
     const assistantMessage =
-      data.choices?.[0]?.message?.content ||
-      "I apologize, but I could not generate a response.";
+      data.choices?.[0]?.message?.content || 'I apologize, but I could not generate a response.';
 
     return jsonResponse({
       response: assistantMessage,
       sessionId,
     });
   } catch (error) {
-    console.error("Chat API error:", error);
+    console.error('Chat API error:', error);
     return jsonResponse(
       {
-        error: "Failed to process chat request",
-        response: "Sorry, something went wrong. Please try again.",
+        error: 'Failed to process chat request',
+        response: 'Sorry, something went wrong. Please try again.',
       },
-      500,
+      500
     );
   }
 }

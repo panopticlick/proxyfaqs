@@ -1,0 +1,109 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getProxyClusters, getProxyClusterTopics } from '../../lib/pseo';
+
+const pages = [...getProxyClusters()].sort((a, b) => (b.volume || 0) - (a.volume || 0));
+const topics = getProxyClusterTopics();
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Proxy Use Cases',
+  itemListElement: pages.slice(0, 20).map((page, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'WebPage',
+      name: page.pageTitle,
+      url: `https://proxyfaqs.com/use-cases/${page.slug}`,
+    },
+  })),
+};
+---
+
+<Base
+  title="Proxy Use Cases | ProxyFAQs"
+  description="Browse proxy use cases and long-tail questions to find the right proxy setup for your target."
+  jsonLd={jsonLd}
+>
+  <section class="bg-gradient-to-b from-primary-50 via-white to-white py-16">
+    <div class="container-custom text-center">
+      <p class="badge-primary mx-auto w-fit mb-4">Use Cases</p>
+      <h1 class="text-4xl md:text-5xl font-bold text-secondary-900 mb-4">Proxy Use Cases</h1>
+      <p class="text-lg text-secondary-600 max-w-3xl mx-auto">
+        Explore keyword-driven pages built from real search demand. Each page includes proxy
+        recommendations, quick checklists, and internal links to related questions.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-10 bg-white">
+    <div class="container-custom">
+      <div class="flex flex-wrap gap-2 mb-8">
+        {
+          topics.map((topic) => (
+            <span class="badge-secondary">
+              {topic.name} ({topic.count})
+            </span>
+          ))
+        }
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {
+          pages.length > 0 ? (
+            pages.slice(0, 120).map((page) => (
+              <a href={`/use-cases/${page.slug}`} class="card-hover flex flex-col">
+                <div class="flex items-center justify-between text-xs text-secondary-500 mb-2">
+                  <span class="badge-secondary">{page.topic}</span>
+                  {page.volume && <span>Vol {page.volume.toLocaleString()}</span>}
+                </div>
+                <h2 class="text-lg font-semibold text-secondary-900 mb-2">{page.pageTitle}</h2>
+                <p class="text-sm text-secondary-600 line-clamp-2 mb-4">{page.keyword}</p>
+                <span class="text-primary-600 text-sm font-medium">View use case →</span>
+              </a>
+            ))
+          ) : (
+            <div class="text-secondary-600">No use cases found.</div>
+          )
+        }
+      </div>
+
+      {
+        pages.length > 120 && (
+          <div class="text-center text-secondary-500 text-sm mt-8">
+            Showing 120 of {pages.length} use cases. Refine by search to access more.
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <section class="py-12 bg-secondary-50">
+    <div class="container-custom">
+      <div class="card bg-gradient-to-br from-primary-50 to-white">
+        <div class="grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-3">
+              Need guidance for a specific target?
+            </h2>
+            <p class="text-secondary-600 mb-4">
+              Use search to find relevant answers or ask our AI assistant for a tailored proxy plan.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <a href="/search" class="btn-primary">Search Questions</a>
+              <a href="/providers" class="btn-secondary">Compare Providers</a>
+            </div>
+          </div>
+          <div class="text-sm text-secondary-600">
+            <ul class="space-y-2">
+              <li>• Keyword-driven use cases based on real demand</li>
+              <li>• Proxy type recommendations and checklists</li>
+              <li>• Internal links to questions and guides</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

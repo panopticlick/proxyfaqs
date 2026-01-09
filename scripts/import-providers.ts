@@ -3,16 +3,16 @@
  * Imports proxy provider information from merchant CSV files
  */
 
-import { createClient } from "@supabase/supabase-js";
-import * as fs from "fs";
-import * as path from "path";
+import { createClient } from '@supabase/supabase-js';
+import * as fs from 'fs';
+import * as path from 'path';
+import { env } from '../src/lib/env';
 
 // Configuration
 const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  "postgresql://postgres:your_password@supabase-db:5432/postgres";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-const DATA_DIR = path.join(process.cwd(), "../data/proxy merchant");
+  env.SUPABASE_URL || 'postgresql://postgres:your_password@supabase-db:5432/postgres';
+const SUPABASE_KEY = env.SUPABASE_SERVICE_KEY || '';
+const DATA_DIR = path.join(process.cwd(), '../data/proxy merchant');
 const BATCH_SIZE = 100;
 
 // Initialize Supabase client
@@ -39,8 +39,8 @@ interface Provider {
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
     .substring(0, 100);
 }
 
@@ -53,20 +53,20 @@ function parseProductCSV(filePath: string): Map<string, any> {
     return providers;
   }
 
-  const content = fs.readFileSync(filePath, "utf-8");
-  const lines = content.split("\n");
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    const parts = line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''));
     if (parts.length < 3) continue;
 
     const name = parts[0];
     const domain = parts[1];
     const propertyName = parts[2];
-    const propertyValue = parts[3] || "";
+    const propertyValue = parts[3] || '';
 
     if (!name || !domain) continue;
 
@@ -103,14 +103,14 @@ function parsePriceCSV(filePath: string): Map<string, any[]> {
     return pricing;
   }
 
-  const content = fs.readFileSync(filePath, "utf-8");
-  const lines = content.split("\n");
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    const parts = line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''));
     if (parts.length < 2) continue;
 
     const name = parts[0];
@@ -141,14 +141,14 @@ function parseDomainCSV(filePath: string): Map<string, any> {
     return domains;
   }
 
-  const content = fs.readFileSync(filePath, "utf-8");
-  const lines = content.split("\n");
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    const parts = line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''));
     if (parts.length < 2) continue;
 
     const name = parts[0];
@@ -160,7 +160,7 @@ function parseDomainCSV(filePath: string): Map<string, any> {
     domains.set(slug, {
       name,
       domain,
-      website_url: domain.startsWith("http") ? domain : `https://${domain}`,
+      website_url: domain.startsWith('http') ? domain : `https://${domain}`,
     });
   }
 
@@ -170,24 +170,21 @@ function parseDomainCSV(filePath: string): Map<string, any> {
 // Load affiliate links
 function loadAffiliateLinks(): Map<string, string> {
   const affiliateLinks = new Map<string, string>();
-  const affiliateFilePath = path.join(
-    process.cwd(),
-    "../docs/proxy-provider-affiliate-links.csv",
-  );
+  const affiliateFilePath = path.join(process.cwd(), '../docs/proxy-provider-affiliate-links.csv');
 
   if (!fs.existsSync(affiliateFilePath)) {
-    console.warn("⚠️  No affiliate links file found");
+    console.warn('⚠️  No affiliate links file found');
     return affiliateLinks;
   }
 
-  const content = fs.readFileSync(affiliateFilePath, "utf-8");
-  const lines = content.split("\n");
+  const content = fs.readFileSync(affiliateFilePath, 'utf-8');
+  const lines = content.split('\n');
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    const parts = line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''));
     if (parts.length < 2) continue;
 
     const name = parts[0];
@@ -204,22 +201,22 @@ function loadAffiliateLinks(): Map<string, string> {
 
 // Main import function
 async function importProviders() {
-  console.log("🚀 Starting provider data import...\n");
+  console.log('🚀 Starting provider data import...\n');
 
   // Parse all data sources
-  console.log("📂 Parsing Product.csv...");
-  const products = parseProductCSV(path.join(DATA_DIR, "Product.csv"));
+  console.log('📂 Parsing Product.csv...');
+  const products = parseProductCSV(path.join(DATA_DIR, 'Product.csv'));
   console.log(`   Found ${products.size} providers\n`);
 
-  console.log("📂 Parsing Price.csv...");
-  const pricing = parsePriceCSV(path.join(DATA_DIR, "Price.csv"));
+  console.log('📂 Parsing Price.csv...');
+  const pricing = parsePriceCSV(path.join(DATA_DIR, 'Price.csv'));
   console.log(`   Found pricing for ${pricing.size} providers\n`);
 
-  console.log("📂 Parsing Domain.csv...");
-  const domains = parseDomainCSV(path.join(DATA_DIR, "Domain.csv"));
+  console.log('📂 Parsing Domain.csv...');
+  const domains = parseDomainCSV(path.join(DATA_DIR, 'Domain.csv'));
   console.log(`   Found ${domains.size} domains\n`);
 
-  console.log("📂 Loading affiliate links...");
+  console.log('📂 Loading affiliate links...');
   const affiliateLinks = loadAffiliateLinks();
   console.log(`   Found ${affiliateLinks.size} affiliate links\n`);
 
@@ -230,7 +227,7 @@ async function importProviders() {
   for (const [slug, product] of products) {
     const domain = domains.get(slug);
     const prices = pricing.get(slug) || [];
-    const affiliateUrl = affiliateLinks.get(slug) || "";
+    const affiliateUrl = affiliateLinks.get(slug) || '';
 
     // Build features object
     const features: any = {};
@@ -242,14 +239,14 @@ async function importProviders() {
 
       // Extract pros/cons from properties
       if (
-        prop.name.toLowerCase().includes("advantage") ||
-        prop.name.toLowerCase().includes("pro")
+        prop.name.toLowerCase().includes('advantage') ||
+        prop.name.toLowerCase().includes('pro')
       ) {
         if (prop.value) pros.push(prop.value);
       }
       if (
-        prop.name.toLowerCase().includes("disadvantage") ||
-        prop.name.toLowerCase().includes("con")
+        prop.name.toLowerCase().includes('disadvantage') ||
+        prop.name.toLowerCase().includes('con')
       ) {
         if (prop.value) cons.push(prop.value);
       }
@@ -270,14 +267,13 @@ async function importProviders() {
       website_url: domain?.website_url || `https://${product.domain}`,
       features,
       pricing: pricingObj,
-      pros:
-        pros.length > 0 ? pros : ["High-quality proxies", "Reliable service"],
-      cons: cons.length > 0 ? cons : ["Pricing varies by plan"],
+      pros: pros.length > 0 ? pros : ['High-quality proxies', 'Reliable service'],
+      cons: cons.length > 0 ? cons : ['Pricing varies by plan'],
       affiliate_url: affiliateUrl,
-      affiliate_code: "",
+      affiliate_code: '',
       rating: 4.0 + Math.random(), // Random rating between 4.0-5.0
       rank: rank++,
-      review_html: "",
+      review_html: '',
     });
   }
 
@@ -289,32 +285,30 @@ async function importProviders() {
     const batch = providers.slice(i, i + BATCH_SIZE);
 
     const { error } = await supabase
-      .from("providers")
-      .upsert(batch, { onConflict: "slug", ignoreDuplicates: false });
+      .from('providers')
+      .upsert(batch, { onConflict: 'slug', ignoreDuplicates: false });
 
     if (error) {
       console.error(`❌ Error inserting batch: ${error.message}`);
     } else {
       imported += batch.length;
-      console.log(
-        `✅ Imported batch of ${batch.length} providers (Total: ${imported})`,
-      );
+      console.log(`✅ Imported batch of ${batch.length} providers (Total: ${imported})`);
     }
   }
 
-  console.log("\n✅ Import complete!\n");
-  console.log("📈 Summary:");
+  console.log('\n✅ Import complete!\n');
+  console.log('📈 Summary:');
   console.log(`   Total providers imported: ${imported}`);
-  console.log("");
+  console.log('');
 }
 
 // Run import
 importProviders()
   .then(() => {
-    console.log("✨ All done!");
+    console.log('✨ All done!');
     process.exit(0);
   })
   .catch((error) => {
-    console.error("❌ Fatal error:", error);
+    console.error('❌ Fatal error:', error);
     process.exit(1);
   });

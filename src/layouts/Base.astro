@@ -1,8 +1,9 @@
 ---
-import '@/styles/global.css';
-import Header from '@/components/Header.astro';
-import Footer from '@/components/Footer.astro';
-import ChatWidget from '@/components/chat/ChatWidget.astro';
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ChatWidget from '../components/chat/ChatWidget.astro';
+import { env } from '../lib/env';
 
 export interface Props {
   title: string;
@@ -22,11 +23,16 @@ const {
   jsonLd,
 } = Astro.props;
 
-const siteUrl = import.meta.env.SITE || 'https://proxyfaqs.com';
+const siteUrl = env.SITE;
 const currentUrl = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
 const fullOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, siteUrl).href;
 
 const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
+
+// Cache headers for static pages (Cloudflare Pages compatible)
+const cacheMaxAge = 3600; // 1 hour browser cache
+const cacheSMaxAge = 86400; // 24 hour CDN cache
+const staleWhileRevalidate = 604800; // 7 days
 ---
 
 <!doctype html>
@@ -40,6 +46,10 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
     <title>{fullTitle}</title>
     <meta name="title" content={fullTitle} />
     <meta name="description" content={description} />
+    <meta
+      name="keywords"
+      content="proxy, proxies, web scraping, residential proxy, datacenter proxy, rotating proxy, scraping API, proxy provider, proxy service"
+    />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Canonical URL -->
@@ -56,6 +66,7 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
     <meta property="og:description" content={description} />
     <meta property="og:image" content={fullOgImage} />
     <meta property="og:site_name" content="ProxyFAQs" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
@@ -64,21 +75,39 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
     <meta property="twitter:description" content={description} />
     <meta property="twitter:image" content={fullOgImage} />
 
-    <!-- Fonts -->
+    <!-- Font Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <style>
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'JetBrains Mono';
+        font-style: normal;
+        font-display: swap;
+      }
+    </style>
 
     <!-- JSON-LD Structured Data -->
-    {jsonLd && (
-      <script type="application/ld+json" set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : [jsonLd])} />
-    )}
+    {
+      jsonLd && (
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : [jsonLd])}
+          is:inline
+        />
+      )
+    }
 
     <!-- Default Organization Schema -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" is:inline>
       {
         "@context": "https://schema.org",
         "@type": "Organization",

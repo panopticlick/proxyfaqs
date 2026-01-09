@@ -39,3 +39,5 @@ wrangler.toml
 SECRETS.txt
 deploy-now.sh
 scripts/setup-github.sh
+scripts/setup-secrets.ts
+package-lock.json

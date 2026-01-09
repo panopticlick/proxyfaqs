@@ -1,47 +1,32 @@
 ---
-import Base from '@/layouts/Base.astro';
-import SearchBox from '@/components/SearchBox.astro';
-import QuestionCard from '@/components/QuestionCard.astro';
-import { searchQuestions, getPopularQuestions } from '@/lib/supabase';
+import Base from '../layouts/Base.astro';
+import SearchBox from '../components/SearchBox.astro';
+import QuestionCard from '../components/QuestionCard.astro';
+import { getPopularQuestions } from '../lib/supabase';
 
-const query = Astro.url.searchParams.get('q') || '';
-
-let results: any[] = [];
 let popularQuestions: any[] = [];
-let searchPerformed = false;
 
-if (query.trim()) {
-  searchPerformed = true;
-  try {
-    results = await searchQuestions(query, 50);
-  } catch (error) {
-    console.error('Search error:', error);
-  }
-} else {
-  try {
-    popularQuestions = await getPopularQuestions(20);
-  } catch (error) {
-    console.error('Error fetching popular questions:', error);
-  }
+try {
+  popularQuestions = await getPopularQuestions(20);
+} catch (error) {
+  console.error('Error fetching popular questions:', error);
 }
-
-const title = query ? `Search: ${query}` : 'Search';
 ---
 
 <Base
-  title={title}
-  description={query ? `Search results for "${query}" - Find answers about proxies and web scraping` : 'Search our knowledge base of proxy and web scraping questions'}
-  noindex={!query}
+  title="Search"
+  description="Search our knowledge base of proxy and web scraping questions"
+  noindex={true}
 >
   <div class="bg-secondary-50 min-h-screen">
     <!-- Search Header -->
     <section class="bg-white border-b border-secondary-200 py-8">
       <div class="container-custom">
-        <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-6">
-          {query ? `Search results for "${query}"` : 'Search Questions'}
+        <h1 id="search-heading" class="text-2xl md:text-3xl font-bold text-secondary-900 mb-6">
+          Search Questions
         </h1>
         <div class="max-w-2xl">
-          <SearchBox size="md" initialValue={query} autofocus={!query} />
+          <SearchBox size="md" autofocus />
         </div>
       </div>
     </section>
@@ -49,50 +34,261 @@ const title = query ? `Search: ${query}` : 'Search';
     <!-- Results Section -->
     <section class="py-8">
       <div class="container-custom">
-        {searchPerformed ? (
-          results.length > 0 ? (
-            <div>
-              <p class="text-secondary-600 mb-6">
-                Found <strong class="text-secondary-900">{results.length}</strong> results
-              </p>
-              <div class="grid gap-4">
-                {results.map((question) => (
-                  <QuestionCard question={question} />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div class="text-center py-12">
-              <div class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 class="text-xl font-semibold text-secondary-900 mb-2">No results found</h2>
-              <p class="text-secondary-600 mb-6">
-                We couldn't find any questions matching "{query}"
-              </p>
-              <div class="text-sm text-secondary-500">
-                <p>Try:</p>
-                <ul class="mt-2 space-y-1">
-                  <li>• Using different keywords</li>
-                  <li>• Using more general terms</li>
-                  <li>• Checking your spelling</li>
-                </ul>
-              </div>
-            </div>
-          )
-        ) : (
-          <div>
-            <h2 class="text-xl font-semibold text-secondary-900 mb-6">Popular Questions</h2>
-            <div class="grid gap-4 md:grid-cols-2">
-              {popularQuestions.map((question) => (
-                <QuestionCard question={question} />
-              ))}
-            </div>
+        <div id="search-results" class="hidden">
+          <p id="search-meta" class="text-secondary-600 mb-6"></p>
+          <div id="search-results-list" class="grid gap-4"></div>
+        </div>
+
+        <div id="search-empty" class="hidden text-center py-12">
+          <div
+            class="w-16 h-16 rounded-full bg-secondary-100 flex items-center justify-center mx-auto mb-4"
+          >
+            <svg
+              class="w-8 h-8 text-secondary-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
           </div>
-        )}
+          <h2 class="text-xl font-semibold text-secondary-900 mb-2">No results found</h2>
+          <p id="search-empty-query" class="text-secondary-600 mb-6"></p>
+          <div class="text-sm text-secondary-500">
+            <p>Try:</p>
+            <ul class="mt-2 space-y-1">
+              <li>• Using different keywords</li>
+              <li>• Using more general terms</li>
+              <li>• Checking your spelling</li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="search-popular">
+          <h2 class="text-xl font-semibold text-secondary-900 mb-6">Popular Questions</h2>
+          <div class="grid gap-4 md:grid-cols-2">
+            {popularQuestions.map((question) => <QuestionCard question={question} />)}
+          </div>
+        </div>
       </div>
     </section>
   </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q')?.trim() || '';
+
+    const heading = document.getElementById('search-heading');
+    const meta = document.getElementById('search-meta');
+    const resultsContainer = document.getElementById('search-results');
+    const resultsList = document.getElementById('search-results-list');
+    const emptyState = document.getElementById('search-empty');
+    const emptyQuery = document.getElementById('search-empty-query');
+    const popularContainer = document.getElementById('search-popular');
+    const searchInput = document.querySelector(
+      'form.search-form input[type="search"]'
+    ) as HTMLInputElement | null;
+
+    if (searchInput && query) {
+      searchInput.value = query;
+    }
+
+    // Debounced search function
+    let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+    const DEBOUNCE_MS = 300;
+
+    async function performSearch(searchQuery: string) {
+      const safeQuery = escapeHtml(searchQuery);
+
+      if (heading) {
+        heading.textContent = `Search results for "${searchQuery}"`;
+      }
+      if (emptyQuery) {
+        emptyQuery.textContent = `We couldn't find any questions matching "${searchQuery}"`;
+      }
+      document.title = `Search: ${searchQuery} | ProxyFAQs`;
+
+      popularContainer?.classList.add('hidden');
+      emptyState?.classList.add('hidden');
+      resultsContainer?.classList.remove('hidden');
+
+      if (resultsList) {
+        resultsList.innerHTML = `
+          <div class="flex flex-col gap-4">
+            <div class="skeleton h-6 w-3/4"></div>
+            <div class="skeleton h-24 w-full"></div>
+            <div class="skeleton h-24 w-full"></div>
+            <div class="skeleton h-24 w-full"></div>
+          </div>
+        `;
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&limit=50`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok) throw new Error('Search failed');
+
+        const data = await res.json();
+        const results = Array.isArray(data.results) ? data.results : [];
+
+        if (!resultsList || !meta) return;
+
+        if (results.length === 0) {
+          resultsContainer?.classList.add('hidden');
+          emptyState?.classList.remove('hidden');
+          meta.textContent = '';
+          return;
+        }
+
+        meta.innerHTML = `Found <strong class="text-secondary-900">${results.length}</strong> results for "${safeQuery}"`;
+        resultsList.innerHTML = results.map(renderQuestionCard).join('');
+      } catch (error) {
+        console.error('Search error:', error);
+        resultsContainer?.classList.add('hidden');
+        emptyState?.classList.add('hidden');
+
+        // Show error state
+        if (resultsList) {
+          resultsList.innerHTML = `
+            <div class="text-center py-12">
+              <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-secondary-900 mb-2">Search Error</h3>
+              <p class="text-secondary-600 mb-4">Something went wrong. Please try again.</p>
+              <button onclick="window.location.reload()" class="btn-primary">
+                Try Again
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    if (!query) {
+      resultsContainer?.classList.add('hidden');
+      emptyState?.classList.add('hidden');
+      popularContainer?.classList.remove('hidden');
+    } else {
+      performSearch(query);
+    }
+
+    // Live search with debouncing
+    searchInput?.addEventListener('input', () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      const newQuery = searchInput.value.trim();
+
+      if (newQuery.length === 0) {
+        resultsContainer?.classList.add('hidden');
+        emptyState?.classList.add('hidden');
+        popularContainer?.classList.remove('hidden');
+        if (heading) heading.textContent = 'Search Questions';
+        document.title = 'Search | ProxyFAQs';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        // Update URL without triggering navigation
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('q', newQuery);
+        window.history.replaceState({}, '', newUrl.toString());
+
+        performSearch(newQuery);
+      }, DEBOUNCE_MS);
+    });
+
+    function renderQuestionCard(item: {
+      slug: string;
+      question: string;
+      answer?: string;
+      category?: string;
+      view_count?: number;
+    }) {
+      const question = escapeHtml(item.question || '');
+      const answer = truncateText(stripHtml(item.answer || ''), 150);
+      const category = item.category
+        ? `
+        <span class="category-pill !py-1 !px-2">
+          ${escapeHtml(item.category)}
+        </span>
+      `
+        : '';
+      const views = item.view_count
+        ? `
+        <span class="flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          ${Number(item.view_count).toLocaleString()}
+        </span>
+      `
+        : '';
+
+      return `
+        <a href="/q/${encodeURIComponent(item.slug)}" class="question-card block group">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0">
+              <div class="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center question-icon transition-all">
+                <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-secondary-900 font-medium group-hover:text-primary-600 transition-colors line-clamp-2">
+                ${question}
+              </h3>
+              <p class="mt-1 text-sm text-secondary-600 line-clamp-2">
+                ${answer}
+              </p>
+              <div class="mt-3 flex items-center gap-3 text-xs text-secondary-500">
+                ${category}
+                ${views}
+              </div>
+            </div>
+            <div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </a>
+      `;
+    }
+
+    function stripHtml(text: string) {
+      return text.replace(/<[^>]*>/g, '');
+    }
+
+    function truncateText(text: string, maxLength: number) {
+      if (text.length <= maxLength) return text;
+      return text.slice(0, Math.max(0, maxLength - 3)) + '...';
+    }
+
+    function escapeHtml(text: string) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
 </Base>

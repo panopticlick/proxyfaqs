@@ -4,7 +4,7 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://proxyfaqs.com/sitemap-index.xml
+Sitemap: https://proxyfaqs.com/sitemap.xml
 
 # Disallow API endpoints
 Disallow: /api/

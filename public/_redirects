@@ -1,0 +1,10 @@
+# ProxyFAQs Cloudflare Pages Redirects
+# https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Force HTTPS
+http://proxyfaqs.com/* https://proxyfaqs.com/:splat
+http://www.proxyfaqs.com/* https://proxyfaqs.com/:splat
+https://www.proxyfaqs.com/* https://proxyfaqs.com/:splat
+
+# API health check
+/health /api/health 200

@@ -3,21 +3,22 @@
  * Imports proxy provider information from merchant CSV files
  */
 
-import { Client } from "pg";
-import * as fs from "fs";
-import * as path from "path";
-import Papa from "papaparse";
+import { Client } from 'pg';
+import * as fs from 'fs';
+import * as path from 'path';
+import Papa from 'papaparse';
+import { env } from '../src/lib/env';
 
 // Configuration - Direct PostgreSQL connection via SSH tunnel
 const DB_CONFIG = {
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5433"),
-  database: "postgres",
-  user: "postgres",
-  password: process.env.DB_PASSWORD || "",
+  host: env.DB_HOST,
+  port: env.DB_PORT,
+  database: 'postgres',
+  user: 'postgres',
+  password: env.DB_PASSWORD,
 };
 
-const DATA_DIR = path.join(process.cwd(), "../data/proxy merchant");
+const DATA_DIR = path.join(process.cwd(), '../data/proxy merchant');
 
 interface Provider {
   slug: string;
@@ -40,15 +41,15 @@ interface Provider {
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
     .substring(0, 100);
 }
 
 // Escape string for PostgreSQL
 function escapeString(str: string): string {
-  if (!str) return "";
-  return str.replace(/'/g, "''").replace(/\\/g, "\\\\");
+  if (!str) return '';
+  return str.replace(/'/g, "''").replace(/\\/g, '\\\\');
 }
 
 // Parse Product CSV using papaparse for proper multi-line field handling
@@ -67,24 +68,24 @@ function parseProductCSV(filePath: string): Map<
     return providers;
   }
 
-  const content = fs.readFileSync(filePath, "utf-8");
+  const content = fs.readFileSync(filePath, 'utf-8');
   const result = Papa.parse(content, {
     header: true,
     skipEmptyLines: true,
   });
 
   for (const row of result.data as Record<string, string>[]) {
-    const name = row["Name"]?.trim();
-    const domain = row["Domain"]?.trim();
-    const propertyName = row["Property Name"]?.trim();
-    const propertyValue = row["Property Value"]?.trim() || "";
+    const name = row['Name']?.trim();
+    const domain = row['Domain']?.trim();
+    const propertyName = row['Property Name']?.trim();
+    const propertyValue = row['Property Value']?.trim() || '';
 
     if (!name || !domain) continue;
 
     // Skip rows where name looks like a feature description (ends with period or contains multiple words with periods)
     if (
-      name.endsWith(".") ||
-      name.includes(";") ||
+      name.endsWith('.') ||
+      name.includes(';') ||
       name.length > 100 ||
       /^\d+[MK]?\+?\s/.test(name) // starts with number like "55M+"
     ) {
@@ -115,7 +116,7 @@ function parseProductCSV(filePath: string): Map<
 
 // Parse Domain CSV using papaparse
 function parseDomainCSV(
-  filePath: string,
+  filePath: string
 ): Map<string, { name: string; domain: string; website_url: string }> {
   const domains = new Map();
 
@@ -124,15 +125,15 @@ function parseDomainCSV(
     return domains;
   }
 
-  const content = fs.readFileSync(filePath, "utf-8");
+  const content = fs.readFileSync(filePath, 'utf-8');
   const result = Papa.parse(content, {
     header: true,
     skipEmptyLines: true,
   });
 
   for (const row of result.data as Record<string, string>[]) {
-    const name = row["Name"]?.trim();
-    const domain = row["Domain"]?.trim();
+    const name = row['Name']?.trim();
+    const domain = row['Domain']?.trim();
 
     if (!name || !domain) continue;
 
@@ -140,7 +141,7 @@ function parseDomainCSV(
     domains.set(slug, {
       name,
       domain,
-      website_url: domain.startsWith("http") ? domain : `https://${domain}`,
+      website_url: domain.startsWith('http') ? domain : `https://${domain}`,
     });
   }
 
@@ -150,17 +151,14 @@ function parseDomainCSV(
 // Load affiliate links using papaparse
 function loadAffiliateLinks(): Map<string, string> {
   const affiliateLinks = new Map<string, string>();
-  const affiliateFilePath = path.join(
-    process.cwd(),
-    "../docs/proxy-provider-affiliate-links.csv",
-  );
+  const affiliateFilePath = path.join(process.cwd(), '../docs/proxy-provider-affiliate-links.csv');
 
   if (!fs.existsSync(affiliateFilePath)) {
-    console.warn("No affiliate links file found");
+    console.warn('No affiliate links file found');
     return affiliateLinks;
   }
 
-  const content = fs.readFileSync(affiliateFilePath, "utf-8");
+  const content = fs.readFileSync(affiliateFilePath, 'utf-8');
   const result = Papa.parse(content, {
     header: true,
     skipEmptyLines: true,
@@ -168,13 +166,9 @@ function loadAffiliateLinks(): Map<string, string> {
 
   for (const row of result.data as Record<string, string>[]) {
     // Try common column name variations
-    const name =
-      row["Name"] || row["name"] || row["Provider"] || Object.values(row)[0];
+    const name = row['Name'] || row['name'] || row['Provider'] || Object.values(row)[0];
     const affiliateUrl =
-      row["Affiliate URL"] ||
-      row["affiliate_url"] ||
-      row["URL"] ||
-      Object.values(row)[1];
+      row['Affiliate URL'] || row['affiliate_url'] || row['URL'] || Object.values(row)[1];
 
     if (name && affiliateUrl) {
       const slug = generateSlug(name.trim());
@@ -187,24 +181,24 @@ function loadAffiliateLinks(): Map<string, string> {
 
 // Main import function
 async function importProviders() {
-  console.log("Starting provider data import via PostgreSQL...\n");
+  console.log('Starting provider data import via PostgreSQL...\n');
 
   const client = new Client(DB_CONFIG);
 
   try {
     await client.connect();
-    console.log("Connected to PostgreSQL\n");
+    console.log('Connected to PostgreSQL\n');
 
     // Parse all data sources
-    console.log("Parsing Product.csv...");
-    const products = parseProductCSV(path.join(DATA_DIR, "Product.csv"));
+    console.log('Parsing Product.csv...');
+    const products = parseProductCSV(path.join(DATA_DIR, 'Product.csv'));
     console.log(`   Found ${products.size} providers\n`);
 
-    console.log("Parsing Domain.csv...");
-    const domains = parseDomainCSV(path.join(DATA_DIR, "Domain.csv"));
+    console.log('Parsing Domain.csv...');
+    const domains = parseDomainCSV(path.join(DATA_DIR, 'Domain.csv'));
     console.log(`   Found ${domains.size} domains\n`);
 
-    console.log("Loading affiliate links...");
+    console.log('Loading affiliate links...');
     const affiliateLinks = loadAffiliateLinks();
     console.log(`   Found ${affiliateLinks.size} affiliate links\n`);
 
@@ -214,7 +208,7 @@ async function importProviders() {
 
     for (const [slug, product] of products) {
       const domain = domains.get(slug);
-      const affiliateUrl = affiliateLinks.get(slug) || "";
+      const affiliateUrl = affiliateLinks.get(slug) || '';
 
       // Build features object
       const features: Record<string, unknown> = {};
@@ -226,14 +220,14 @@ async function importProviders() {
 
         // Extract pros/cons from properties
         if (
-          prop.name.toLowerCase().includes("advantage") ||
-          prop.name.toLowerCase().includes("pro")
+          prop.name.toLowerCase().includes('advantage') ||
+          prop.name.toLowerCase().includes('pro')
         ) {
           if (prop.value) pros.push(prop.value);
         }
         if (
-          prop.name.toLowerCase().includes("disadvantage") ||
-          prop.name.toLowerCase().includes("con")
+          prop.name.toLowerCase().includes('disadvantage') ||
+          prop.name.toLowerCase().includes('con')
         ) {
           if (prop.value) cons.push(prop.value);
         }
@@ -248,14 +242,13 @@ async function importProviders() {
         website_url: domain?.website_url || `https://${product.domain}`,
         features,
         pricing: {},
-        pros:
-          pros.length > 0 ? pros : ["High-quality proxies", "Reliable service"],
-        cons: cons.length > 0 ? cons : ["Pricing varies by plan"],
+        pros: pros.length > 0 ? pros : ['High-quality proxies', 'Reliable service'],
+        cons: cons.length > 0 ? cons : ['Pricing varies by plan'],
         affiliate_url: affiliateUrl,
-        affiliate_code: "",
+        affiliate_code: '',
         rating: 4.0 + Math.random(), // Random rating between 4.0-5.0
         rank: rank++,
-        review_html: "",
+        review_html: '',
       });
     }
 
@@ -274,8 +267,8 @@ async function importProviders() {
           '${escapeString(p.website_url)}',
           '${escapeString(JSON.stringify(p.features))}',
           '${escapeString(JSON.stringify(p.pricing))}',
-          ARRAY[${p.pros.map((pro) => `'${escapeString(pro)}'`).join(",")}],
-          ARRAY[${p.cons.map((con) => `'${escapeString(con)}'`).join(",")}],
+          ARRAY[${p.pros.map((pro) => `'${escapeString(pro)}'`).join(',')}],
+          ARRAY[${p.cons.map((con) => `'${escapeString(con)}'`).join(',')}],
           '${escapeString(p.affiliate_url)}',
           '${escapeString(p.affiliate_code)}',
           ${p.rating.toFixed(1)},
@@ -307,7 +300,7 @@ async function importProviders() {
     }
 
     console.log(`Imported ${imported} providers\n`);
-    console.log("Import complete!");
+    console.log('Import complete!');
   } finally {
     await client.end();
   }
@@ -316,10 +309,10 @@ async function importProviders() {
 // Run import
 importProviders()
   .then(() => {
-    console.log("\nAll done!");
+    console.log('\nAll done!');
     process.exit(0);
   })
   .catch((error) => {
-    console.error("Fatal error:", error);
+    console.error('Fatal error:', error);
     process.exit(1);
   });

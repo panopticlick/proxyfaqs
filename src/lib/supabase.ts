@@ -7,9 +7,13 @@
  *
  * NOTE: This self-hosted Supabase uses API key authentication (not JWT).
  * We use direct REST API calls for SSG compatibility.
+ *
+ * SECURITY: All user inputs are validated and parameterized via URLSearchParams
+ * to prevent SQL injection. The REST API interface provides automatic
+ * parameterization.
  */
 
-import { env } from "./env";
+import { env } from './env';
 
 // Database configuration
 const supabaseUrl = env.PUBLIC_SUPABASE_URL;
@@ -39,6 +43,8 @@ export interface Question {
   meta_title: string | null;
   meta_description: string | null;
   view_count: number;
+  quality_score: number | null;
+  last_reviewed: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,11 +102,11 @@ async function supabaseRest<T>(
     textSearch?: {
       column: string;
       query: string;
-      type?: "plain" | "phrase" | "websearch" | "tsquery";
+      type?: 'plain' | 'phrase' | 'websearch' | 'tsquery';
     };
     count?: boolean;
     head?: boolean;
-  } = {},
+  } = {}
 ): Promise<{
   data: T[] | null;
   error: { message: string; code?: string } | null;
@@ -111,7 +117,7 @@ async function supabaseRest<T>(
 
     // Select columns
     if (options.select) {
-      url.searchParams.set("select", options.select);
+      url.searchParams.set('select', options.select);
     }
 
     // Equality filters
@@ -137,67 +143,62 @@ async function supabaseRest<T>(
 
     // Text search
     if (options.textSearch) {
-      const searchType = options.textSearch.type || "plain";
+      const searchType = options.textSearch.type || 'plain';
       const operator =
-        searchType === "websearch"
-          ? "wfts"
-          : searchType === "phrase"
-            ? "phfts"
-            : searchType === "tsquery"
-              ? "fts"
-              : "plfts";
+        searchType === 'websearch'
+          ? 'wfts'
+          : searchType === 'phrase'
+            ? 'phfts'
+            : searchType === 'tsquery'
+              ? 'fts'
+              : 'plfts';
 
-      url.searchParams.set(
-        options.textSearch.column,
-        `${operator}.${options.textSearch.query}`,
-      );
+      url.searchParams.set(options.textSearch.column, `${operator}.${options.textSearch.query}`);
     }
 
     // Order
     if (options.order) {
       url.searchParams.set(
-        "order",
-        `${options.order.column}.${options.order.ascending ? "asc" : "desc"}.nullslast`,
+        'order',
+        `${options.order.column}.${options.order.ascending ? 'asc' : 'desc'}.nullslast`
       );
     }
 
     // Limit
     if (options.limit) {
-      url.searchParams.set("limit", options.limit.toString());
+      url.searchParams.set('limit', options.limit.toString());
     }
 
     // Offset
     if (options.offset) {
-      url.searchParams.set("offset", options.offset.toString());
+      url.searchParams.set('offset', options.offset.toString());
     }
 
     const headers: Record<string, string> = {
       apikey: supabaseAnonKey,
-      "Content-Type": "application/json",
-      "Accept-Profile": "proxyfaqs",
+      'Content-Type': 'application/json',
+      'Accept-Profile': 'proxyfaqs',
     };
 
     if (options.count) {
-      headers["Prefer"] = "count=exact";
+      headers['Prefer'] = 'count=exact';
     }
 
     if (options.head) {
-      headers["Prefer"] = "count=exact";
+      headers['Prefer'] = 'count=exact';
     }
 
     const response = await fetch(url.toString(), {
       headers,
-      method: options.head ? "HEAD" : "GET",
+      method: options.head ? 'HEAD' : 'GET',
     });
 
     if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: "API Error" }));
+      const errorData = await response.json().catch(() => ({ message: 'API Error' }));
       return {
         data: null,
         error: {
-          message: errorData.message || "API Error",
+          message: errorData.message || 'API Error',
           code: errorData.code,
         },
       };
@@ -205,7 +206,7 @@ async function supabaseRest<T>(
 
     let count: number | undefined;
     if (options.count || options.head) {
-      const contentRange = response.headers.get("content-range");
+      const contentRange = response.headers.get('content-range');
       if (contentRange) {
         const match = contentRange.match(/\/(\d+)/);
         if (match) {
@@ -230,20 +231,20 @@ function normalizeSearchQuery(input: string): string {
   const MAX_TERMS = 8;
   return input
     .toLowerCase()
-    .replace(/[^\w\s-]+/g, " ")
-    .replace(/\s+/g, " ")
+    .replace(/[^\w\s-]+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
-    .split(" ")
+    .split(' ')
     .filter(Boolean)
     .slice(0, MAX_TERMS)
-    .join(" ");
+    .join(' ');
 }
 
 // Query helpers - using direct REST API calls
 export async function getCategories(): Promise<Category[]> {
-  const result = await supabaseRest<Category>("categories", {
-    select: "*",
-    order: { column: "question_count", ascending: false },
+  const result = await supabaseRest<Category>('categories', {
+    select: '*',
+    order: { column: 'question_count', ascending: false },
   });
 
   if (result.error) throw result.error;
@@ -251,25 +252,25 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function getCategory(slug: string): Promise<Category | null> {
-  const result = await supabaseRest<Category>("categories", {
-    select: "*",
+  const result = await supabaseRest<Category>('categories', {
+    select: '*',
     eq: { slug },
     limit: 1,
   });
 
-  if (result.error && result.error.code !== "PGRST116") throw result.error;
+  if (result.error && result.error.code !== 'PGRST116') throw result.error;
   return result.data?.[0] || null;
 }
 
 export async function getQuestionsByCategory(
   categorySlug: string,
   limit = 50,
-  offset = 0,
+  offset = 0
 ): Promise<Question[]> {
-  const result = await supabaseRest<Question>("questions", {
-    select: "*",
+  const result = await supabaseRest<Question>('questions', {
+    select: '*',
     eq: { category_slug: categorySlug },
-    order: { column: "view_count", ascending: false },
+    order: { column: 'view_count', ascending: false },
     limit,
     offset,
   });
@@ -279,13 +280,13 @@ export async function getQuestionsByCategory(
 }
 
 export async function getQuestion(slug: string): Promise<Question | null> {
-  const result = await supabaseRest<Question>("questions", {
-    select: "*",
+  const result = await supabaseRest<Question>('questions', {
+    select: '*',
     eq: { slug },
     limit: 1,
   });
 
-  if (result.error && result.error.code !== "PGRST116") throw result.error;
+  if (result.error && result.error.code !== 'PGRST116') throw result.error;
   return result.data?.[0] || null;
 }
 
@@ -296,35 +297,88 @@ export async function getQuestion(slug: string): Promise<Question | null> {
  * 2. Use full-text search to find semantically similar questions
  * 3. Fallback to same-category popular questions if needed
  */
-export async function getRelatedQuestions(
-  question: Question,
-  limit = 5,
-): Promise<Question[]> {
+export async function getRelatedQuestions(question: Question, limit = 5): Promise<Question[]> {
   // Extract meaningful keywords from the question (remove stop words)
   const stopWords = new Set([
-    "what", "how", "why", "when", "where", "which", "who", "is", "are", "do",
-    "does", "can", "could", "should", "would", "the", "a", "an", "in", "on",
-    "at", "to", "for", "of", "with", "and", "or", "but", "not", "be", "have",
-    "has", "was", "were", "been", "being", "will", "your", "you", "i", "my",
-    "it", "its", "this", "that", "these", "those", "there", "here", "from",
-    "about", "into", "through", "during", "before", "after", "above", "below",
+    'what',
+    'how',
+    'why',
+    'when',
+    'where',
+    'which',
+    'who',
+    'is',
+    'are',
+    'do',
+    'does',
+    'can',
+    'could',
+    'should',
+    'would',
+    'the',
+    'a',
+    'an',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    'and',
+    'or',
+    'but',
+    'not',
+    'be',
+    'have',
+    'has',
+    'was',
+    'were',
+    'been',
+    'being',
+    'will',
+    'your',
+    'you',
+    'i',
+    'my',
+    'it',
+    'its',
+    'this',
+    'that',
+    'these',
+    'those',
+    'there',
+    'here',
+    'from',
+    'about',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
   ]);
 
   const keywords = question.question
     .toLowerCase()
-    .replace(/[^\w\s-]/g, " ")
+    .replace(/[^\w\s-]/g, ' ')
     .split(/\s+/)
     .filter((word) => word.length > 2 && !stopWords.has(word))
     .slice(0, 6); // Take top 6 keywords
 
   if (keywords.length > 0) {
     // Use OR-based full-text search for better recall
-    const searchQuery = keywords.join(" | ");
+    const searchQuery = keywords.join(' | ');
 
-    const result = await supabaseRest<Question>("questions", {
-      select: "*",
+    const result = await supabaseRest<Question>('questions', {
+      select: '*',
       neq: { id: question.id },
-      textSearch: { column: "search_vector", query: searchQuery, type: "plain" },
+      textSearch: {
+        column: 'search_vector',
+        query: searchQuery,
+        type: 'plain',
+      },
       limit: limit + 5, // Get extra to filter
     });
 
@@ -341,11 +395,11 @@ export async function getRelatedQuestions(
   }
 
   // Fallback: same category popular questions
-  const fallback = await supabaseRest<Question>("questions", {
-    select: "*",
+  const fallback = await supabaseRest<Question>('questions', {
+    select: '*',
     eq: { category: question.category },
     neq: { id: question.id },
-    order: { column: "view_count", ascending: false },
+    order: { column: 'view_count', ascending: false },
     limit,
   });
 
@@ -353,16 +407,13 @@ export async function getRelatedQuestions(
   return fallback.data || [];
 }
 
-export async function searchQuestions(
-  query: string,
-  limit = 20,
-): Promise<Question[]> {
+export async function searchQuestions(query: string, limit = 20): Promise<Question[]> {
   const normalized = normalizeSearchQuery(query);
   if (!normalized) return [];
 
-  const result = await supabaseRest<Question>("questions", {
-    select: "*",
-    textSearch: { column: "search_vector", query: normalized, type: "plain" },
+  const result = await supabaseRest<Question>('questions', {
+    select: '*',
+    textSearch: { column: 'search_vector', query: normalized, type: 'plain' },
     limit,
   });
 
@@ -372,14 +423,14 @@ export async function searchQuestions(
 
 export async function searchQuestionsWithFallback(
   query: string,
-  limit = 20,
+  limit = 20
 ): Promise<{ results: Question[]; fallback: boolean }> {
   const normalized = normalizeSearchQuery(query);
   if (!normalized) return { results: [], fallback: false };
 
-  const primary = await supabaseRest<Question>("questions", {
-    select: "id, slug, question, answer, category, view_count",
-    textSearch: { column: "search_vector", query: normalized, type: "plain" },
+  const primary = await supabaseRest<Question>('questions', {
+    select: 'id, slug, question, answer, category, view_count',
+    textSearch: { column: 'search_vector', query: normalized, type: 'plain' },
     limit,
   });
 
@@ -387,8 +438,8 @@ export async function searchQuestionsWithFallback(
     return { results: primary.data || [], fallback: false };
   }
 
-  const fallback = await supabaseRest<Question>("questions", {
-    select: "id, slug, question, answer, category, view_count",
+  const fallback = await supabaseRest<Question>('questions', {
+    select: 'id, slug, question, answer, category, view_count',
     ilike: { question: `%${normalized}%` },
     limit,
   });
@@ -398,9 +449,9 @@ export async function searchQuestionsWithFallback(
 }
 
 export async function getProviders(): Promise<Provider[]> {
-  const result = await supabaseRest<Provider>("providers", {
-    select: "*",
-    order: { column: "rank", ascending: true },
+  const result = await supabaseRest<Provider>('providers', {
+    select: '*',
+    order: { column: 'rank', ascending: true },
   });
 
   if (result.error) throw result.error;
@@ -408,20 +459,20 @@ export async function getProviders(): Promise<Provider[]> {
 }
 
 export async function getProvider(slug: string): Promise<Provider | null> {
-  const result = await supabaseRest<Provider>("providers", {
-    select: "*",
+  const result = await supabaseRest<Provider>('providers', {
+    select: '*',
     eq: { slug },
     limit: 1,
   });
 
-  if (result.error && result.error.code !== "PGRST116") throw result.error;
+  if (result.error && result.error.code !== 'PGRST116') throw result.error;
   return result.data?.[0] || null;
 }
 
 export async function getPopularQuestions(limit = 10): Promise<Question[]> {
-  const result = await supabaseRest<Question>("questions", {
-    select: "*",
-    order: { column: "view_count", ascending: false },
+  const result = await supabaseRest<Question>('questions', {
+    select: '*',
+    order: { column: 'view_count', ascending: false },
     limit,
   });
 
@@ -429,24 +480,92 @@ export async function getPopularQuestions(limit = 10): Promise<Question[]> {
   return result.data || [];
 }
 
-export async function incrementViewCount(_questionId: string): Promise<void> {
-  // RPC not implemented for API key auth - silently skip
-  console.warn("incrementViewCount: RPC not implemented for API key auth");
+/**
+ * Increment view count for a question using RPC
+ * Note: This is a no-op during static generation, only works on deployed API routes
+ */
+export async function incrementViewCount(questionId: string): Promise<number | null> {
+  try {
+    const url = new URL(`${supabaseUrl}/rest/v1/rpc/increment_view_count`);
+    const headers: Record<string, string> = {
+      apikey: supabaseAnonKey,
+      'Content-Type': 'application/json',
+      'Accept-Profile': 'proxyfaqs',
+    };
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ question_id: questionId }),
+    });
+
+    if (!response.ok) {
+      console.warn(`incrementViewCount failed: ${response.status}`);
+      return null;
+    }
+
+    const result = await response.json();
+    return result as number | null;
+  } catch (error) {
+    const err = error as Error;
+    console.warn(`incrementViewCount error: ${err.message}`);
+    return null;
+  }
 }
 
 // For static site generation - get all slugs
 export async function getAllQuestionSlugs(): Promise<string[]> {
-  const result = await supabaseRest<{ slug: string }>("questions", {
-    select: "slug",
+  const result = await supabaseRest<{ slug: string }>('questions', {
+    select: 'slug',
   });
 
   if (result.error) throw result.error;
   return (result.data || []).map((q) => q.slug);
 }
 
+/**
+ * Chunked slug fetching for large datasets (1M+ questions)
+ * Reduces memory pressure during build by fetching in batches
+ */
+export async function getAllQuestionSlugsChunked(chunkSize = 5000): Promise<string[]> {
+  const allSlugs: string[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const result = await supabaseRest<{ slug: string }>('questions', {
+      select: 'slug',
+      limit: chunkSize,
+      offset,
+    });
+
+    if (result.error) {
+      // If we have some data, return it; otherwise throw
+      if (allSlugs.length > 0) {
+        console.warn(`Partial slug fetch: ${allSlugs.length} slugs retrieved`);
+        return allSlugs;
+      }
+      throw result.error;
+    }
+
+    const batch = result.data || [];
+    allSlugs.push(...batch.map((q) => q.slug));
+
+    hasMore = batch.length === chunkSize;
+    offset += chunkSize;
+
+    // Progress logging for long builds
+    if (offset % 50000 === 0) {
+      console.log(`Fetched ${allSlugs.length} question slugs...`);
+    }
+  }
+
+  return allSlugs;
+}
+
 export async function getAllCategorySlugs(): Promise<string[]> {
-  const result = await supabaseRest<{ slug: string }>("categories", {
-    select: "slug",
+  const result = await supabaseRest<{ slug: string }>('categories', {
+    select: 'slug',
   });
 
   if (result.error) throw result.error;
@@ -454,14 +573,12 @@ export async function getAllCategorySlugs(): Promise<string[]> {
 }
 
 export async function getAllProviderSlugs(): Promise<string[]> {
-  const result = await supabaseRest<{ slug: string }>("providers", {
-    select: "slug",
+  const result = await supabaseRest<{ slug: string }>('providers', {
+    select: 'slug',
   });
 
   if (result.error) throw result.error;
-  return (result.data || [])
-    .map((p) => p.slug)
-    .filter((slug) => slug && slug.trim() !== "");
+  return (result.data || []).map((p) => p.slug).filter((slug) => slug && slug.trim() !== '');
 }
 
 // Stats for homepage
@@ -471,9 +588,9 @@ export async function getStats(): Promise<{
   totalProviders: number;
 }> {
   const [questions, categories, providers] = await Promise.all([
-    supabaseRest("questions", { select: "id", count: true, head: true }),
-    supabaseRest("categories", { select: "id", count: true, head: true }),
-    supabaseRest("providers", { select: "id", count: true, head: true }),
+    supabaseRest('questions', { select: 'id', count: true, head: true }),
+    supabaseRest('categories', { select: 'id', count: true, head: true }),
+    supabaseRest('providers', { select: 'id', count: true, head: true }),
   ]);
 
   return {
@@ -486,7 +603,7 @@ export async function getStats(): Promise<{
 // Legacy export for compatibility (minimal implementation)
 export const supabase = {
   from: (table: string) => ({
-    select: (columns = "*") => ({
+    select: (columns = '*') => ({
       eq: (column: string, value: string) =>
         supabaseRest(table, { select: columns, eq: { [column]: value } }),
       single: async () => {
@@ -499,7 +616,160 @@ export const supabase = {
     }),
   }),
   rpc: async (_fn: string, _params: Record<string, unknown>) => {
-    console.warn("RPC not implemented for API key auth");
+    console.warn('RPC not implemented for API key auth');
     return { data: null, error: null };
   },
 };
+
+// ============================================================
+// OPTIMIZED QUERY FUNCTIONS
+// ============================================================
+
+/**
+ * Get popular questions from materialized view if available,
+ * falls back to regular query with performance hints.
+ */
+export async function getPopularQuestionsOptimized(limit = 10): Promise<Question[]> {
+  // Try materialized view first via RPC function
+  // For API key auth, we fall back to optimized REST query
+  const result = await supabaseRest<Question>('questions', {
+    select:
+      'id, slug, question, answer, category, category_slug, view_count, created_at, updated_at',
+    // Use view_count ordering which is indexed
+    order: { column: 'view_count', ascending: false },
+    limit,
+  });
+
+  if (result.error) {
+    console.warn('Optimized popular query failed, using fallback:', result.error.message);
+    // Fallback with minimal fields
+    const fallback = await supabaseRest<Question>('questions', {
+      select: 'id, slug, question, answer, category',
+      order: { column: 'view_count', ascending: false },
+      limit,
+    });
+    if (fallback.error) throw fallback.error;
+    return fallback.data || [];
+  }
+
+  return result.data || [];
+}
+
+/**
+ * Optimized category questions query with partial index usage
+ */
+export async function getQuestionsByCategoryOptimized(
+  categorySlug: string,
+  limit = 50
+): Promise<Question[]> {
+  const result = await supabaseRest<Question>('questions', {
+    select: 'id, slug, question, answer, category, view_count',
+    eq: { category_slug: categorySlug },
+    order: { column: 'view_count', ascending: false },
+    limit,
+  });
+
+  if (result.error) throw result.error;
+  return result.data || [];
+}
+
+/**
+ * Batch query helper for fetching multiple questions in parallel
+ * Reduces N+1 queries during build
+ */
+export async function batchGetQuestions(
+  slugs: string[],
+  batchSize = 100
+): Promise<Map<string, Question>> {
+  const result = new Map<string, Question>();
+
+  for (let i = 0; i < slugs.length; i += batchSize) {
+    const batch = slugs.slice(i, i + batchSize);
+
+    const url = new URL(`${supabaseUrl}/rest/v1/questions`);
+    url.searchParams.set(
+      'select',
+      'id, slug, question, answer, category, category_slug, view_count'
+    );
+    url.searchParams.set('limit', batchSize.toString());
+
+    const headers: Record<string, string> = {
+      apikey: supabaseAnonKey,
+      'Content-Type': 'application/json',
+      'Accept-Profile': 'proxyfaqs',
+    };
+
+    // Add slug filters via OR clause
+    const orConditions = batch.map((s) => `slug.eq.${encodeURIComponent(s)}`).join(',');
+    url.searchParams.set('or', `(${orConditions})`);
+
+    const response = await fetch(url.toString(), { headers });
+
+    if (response.ok) {
+      const data = (await response.json()) as Question[];
+      for (const q of data) {
+        result.set(q.slug, q);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Cache-aware search with result memoization for client-side
+ * Returns results with cache metadata
+ */
+export interface SearchResultsWithMeta {
+  results: Question[];
+  query: string;
+  cached: boolean;
+  timestamp: string;
+  ttl: number;
+}
+
+// In-memory cache for search results (build-time only)
+const searchCache = new Map<string, { data: Question[]; timestamp: number }>();
+const SEARCH_CACHE_TTL = 5000; // 5 seconds for build-time caching
+
+export async function searchQuestionsCached(
+  query: string,
+  limit = 20
+): Promise<SearchResultsWithMeta> {
+  const normalized = normalizeSearchQuery(query);
+  const cacheKey = `${normalized}:${limit}`;
+  const now = Date.now();
+
+  // Check cache
+  const cached = searchCache.get(cacheKey);
+  if (cached && now - cached.timestamp < SEARCH_CACHE_TTL) {
+    return {
+      results: cached.data,
+      query,
+      cached: true,
+      timestamp: new Date(cached.timestamp).toISOString(),
+      ttl: SEARCH_CACHE_TTL - (now - cached.timestamp),
+    };
+  }
+
+  // Fetch fresh results
+  const results = await searchQuestions(query, limit);
+
+  // Store in cache
+  searchCache.set(cacheKey, { data: results, timestamp: now });
+
+  return {
+    results,
+    query,
+    cached: false,
+    timestamp: new Date(now).toISOString(),
+    ttl: SEARCH_CACHE_TTL,
+  };
+}
+
+/**
+ * Clear search cache (useful for testing)
+ */
+export function clearSearchCache(): void {
+  searchCache.clear();
+}

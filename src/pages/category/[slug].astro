@@ -1,15 +1,23 @@
 ---
-import Base from '@/layouts/Base.astro';
-import QuestionCard from '@/components/QuestionCard.astro';
-import { getCategory, getQuestionsByCategory, getAllCategorySlugs, getCategories } from '@/lib/supabase';
-import { generateBreadcrumbSchema } from '@/lib/utils';
+import Base from '../../layouts/Base.astro';
+import QuestionCard from '../../components/QuestionCard.astro';
+import {
+  getCategory,
+  getQuestionsByCategory,
+  getAllCategorySlugs,
+  getCategories,
+  type Category,
+  type Question,
+} from '../../lib/supabase';
+import { generateBreadcrumbSchema } from '../../lib/utils';
 
 export async function getStaticPaths() {
   try {
     const slugs = await getAllCategorySlugs();
     return slugs.map((slug) => ({ params: { slug } }));
   } catch (error) {
-    console.warn('Could not fetch category slugs (database may not be set up yet):', error.message);
+    const err = error as Error;
+    console.warn('Could not fetch category slugs (database may not be set up yet):', err.message);
     // Return empty array during build if database is not accessible
     return [];
   }
@@ -17,9 +25,9 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 
-let category = null;
-let questions = [];
-let allCategories = [];
+let category: Category | null = null;
+let questions: Question[] = [];
+let allCategories: Category[] = [];
 
 try {
   [category, questions, allCategories] = await Promise.all([
@@ -47,7 +55,8 @@ const jsonLd = generateBreadcrumbSchema([
 
 <Base
   title={`${category.name} Questions`}
-  description={category.description || `Browse ${category.question_count || 0} questions about ${category.name}. Find expert answers about proxies and web scraping.`}
+  description={category.description ||
+    `Browse ${category.question_count || 0} questions about ${category.name}. Find expert answers about proxies and web scraping.`}
   canonicalUrl={pageUrl}
   jsonLd={jsonLd}
 >
@@ -63,13 +72,21 @@ const jsonLd = generateBreadcrumbSchema([
             </li>
             <li class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"></path>
               </svg>
               <a href="/category" class="hover:text-primary-600">Categories</a>
             </li>
             <li class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"></path>
               </svg>
               <span class="text-secondary-900">{category.name}</span>
             </li>
@@ -77,18 +94,28 @@ const jsonLd = generateBreadcrumbSchema([
         </nav>
 
         <div class="flex items-start gap-4">
-          <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
-            <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          <div
+            class="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center"
+          >
+            <svg
+              class="w-8 h-8 text-primary-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+              ></path>
             </svg>
           </div>
           <div>
             <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-2">
               {category.name}
             </h1>
-            {category.description && (
-              <p class="text-secondary-600 mb-2">{category.description}</p>
-            )}
+            {category.description && <p class="text-secondary-600 mb-2">{category.description}</p>}
             <p class="text-sm text-secondary-500">
               {(category.question_count || 0).toLocaleString()} questions
             </p>
@@ -106,17 +133,22 @@ const jsonLd = generateBreadcrumbSchema([
             <div class="sticky top-24">
               <h2 class="font-semibold text-secondary-900 mb-4">Other Categories</h2>
               <nav class="space-y-2">
-                {allCategories.filter(c => c.slug !== slug).slice(0, 10).map((cat) => (
-                  <a
-                    href={`/category/${cat.slug}`}
-                    class="block px-3 py-2 rounded-lg text-sm text-secondary-600 hover:bg-white hover:text-primary-600 transition-colors"
-                  >
-                    {cat.name}
-                    <span class="text-secondary-400 ml-1">
-                      ({(cat.question_count || 0).toLocaleString()})
-                    </span>
-                  </a>
-                ))}
+                {
+                  allCategories
+                    .filter((c) => c.slug !== slug)
+                    .slice(0, 10)
+                    .map((cat) => (
+                      <a
+                        href={`/category/${cat.slug}`}
+                        class="block px-3 py-2 rounded-lg text-sm text-secondary-600 hover:bg-white hover:text-primary-600 transition-colors"
+                      >
+                        {cat.name}
+                        <span class="text-secondary-400 ml-1">
+                          ({(cat.question_count || 0).toLocaleString()})
+                        </span>
+                      </a>
+                    ))
+                }
               </nav>
             </div>
           </aside>
@@ -124,16 +156,20 @@ const jsonLd = generateBreadcrumbSchema([
           <!-- Questions -->
           <main class="lg:col-span-3 order-1 lg:order-2">
             <div class="grid gap-4">
-              {questions.map((question) => (
-                <QuestionCard question={question} showCategory={false} />
-              ))}
+              {
+                questions.map((question) => (
+                  <QuestionCard question={question} showCategory={false} />
+                ))
+              }
             </div>
 
-            {questions.length === 0 && (
-              <div class="text-center py-12">
-                <p class="text-secondary-600">No questions found in this category.</p>
-              </div>
-            )}
+            {
+              questions.length === 0 && (
+                <div class="text-center py-12">
+                  <p class="text-secondary-600">No questions found in this category.</p>
+                </div>
+              )
+            }
           </main>
         </div>
       </div>

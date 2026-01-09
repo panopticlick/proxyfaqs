@@ -1,0 +1,119 @@
+---
+/**
+ * Affiliate Disclosure Banner Component
+ *
+ * FTC-compliant disclosure for affiliate links.
+ * Displays when affiliate content is present on the page.
+ *
+ * Usage:
+ *   <AffiliateDisclosure variant="banner" />  // Full page banner
+ *   <AffiliateDisclosure variant="inline" />  // Compact inline notice
+ *   <AffiliateDisclosure variant="sidebar" /> // Sidebar card style
+ */
+
+export interface Props {
+  variant?: 'banner' | 'inline' | 'sidebar';
+}
+
+const { variant = 'banner' } = Astro.props;
+
+const styles = {
+  banner: 'p-4 bg-amber-50 border border-amber-200 rounded-lg mb-6',
+  inline: 'text-xs text-secondary-500 mb-4 pb-4 border-b border-secondary-200',
+  sidebar: 'p-4 rounded-lg bg-amber-50 text-sm text-secondary-700 border border-amber-200',
+};
+---
+
+<div class={styles[variant]} role="complementary" aria-label="Affiliate disclosure">
+  {
+    variant === 'banner' ? (
+      <>
+        <div class="flex items-start gap-3">
+          <svg
+            class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <p class="font-semibold text-amber-900">Affiliate Disclosure</p>
+            <p class="text-sm text-amber-800 mt-1">
+              This page contains affiliate links. If you purchase through these links, we may earn a
+              commission at no additional cost to you. We only recommend products and services we
+              have personally tested or thoroughly researched.
+              <a
+                href="/privacy#affiliate-disclosure"
+                class="underline font-medium hover:text-amber-900"
+              >
+                Learn more
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      </>
+    ) : variant === 'sidebar' ? (
+      <>
+        <div class="flex items-start gap-2">
+          <svg
+            class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <p class="font-semibold text-amber-900 text-sm">Affiliate Disclosure</p>
+            <p class="text-xs text-amber-800 mt-1">
+              Links on this page may earn us a commission at no extra cost to you.
+              <a href="/privacy#affiliate-disclosure" class="underline hover:text-amber-900">
+                Learn more
+              </a>
+            </p>
+          </div>
+        </div>
+      </>
+    ) : (
+      <>
+        <p class="flex items-center gap-2">
+          <svg
+            class="w-3 h-3 text-secondary-400 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>
+            <strong>Affiliate Disclosure:</strong> This page contains affiliate links. We may earn a
+            commission if you purchase through these links at no additional cost to you.
+            <a href="/privacy#affiliate-disclosure" class="text-primary-600 hover:underline">
+              Learn more
+            </a>
+          </span>
+        </p>
+      </>
+    )
+  }
+</div>

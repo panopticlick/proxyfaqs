@@ -38,8 +38,7 @@ const iconSizes = {
         stroke-linecap="round"
         stroke-linejoin="round"
         stroke-width="2"
-        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-      />
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
     </svg>
     <input
       type="search"
@@ -53,6 +52,8 @@ const iconSizes = {
       autocomplete="off"
       autofocus={autofocus}
       aria-label="Search"
+      aria-expanded="false"
+      aria-autocomplete="list"
     />
     <button
       type="submit"
@@ -64,9 +65,12 @@ const iconSizes = {
   </div>
 
   <!-- Search suggestions dropdown -->
-  <div class="search-suggestions hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-secondary-200 z-50 overflow-hidden">
+  <div
+    class="search-suggestions hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-secondary-200 z-50 overflow-hidden"
+    role="listbox"
+  >
     <div class="p-2">
-      <div class="suggestions-list"></div>
+      <div class="suggestions-list" role="presentation"></div>
       <div class="px-3 py-2 text-xs text-secondary-500 border-t border-secondary-100 mt-2">
         Popular: residential proxy, web scraping, rotating proxies
       </div>
@@ -77,7 +81,7 @@ const iconSizes = {
 <script>
   const searchForms = document.querySelectorAll('.search-form');
 
-  searchForms.forEach((form) => {
+  searchForms.forEach((form, index) => {
     const input = form.querySelector('input[type="search"]') as HTMLInputElement;
     const suggestions = form.querySelector('.search-suggestions') as HTMLDivElement;
     const suggestionsList = form.querySelector('.suggestions-list') as HTMLDivElement;
@@ -85,46 +89,95 @@ const iconSizes = {
     if (!input || !suggestions) return;
 
     let debounceTimer: ReturnType<typeof setTimeout>;
+    let abortController: AbortController | null = null;
+
+    const suggestionsId = `search-suggestions-${index}`;
+    suggestions.id = suggestionsId;
+    input.setAttribute('aria-controls', suggestionsId);
 
     input.addEventListener('input', () => {
       clearTimeout(debounceTimer);
+
+      // Cancel previous request if still pending
+      if (abortController) {
+        abortController.abort();
+      }
 
       debounceTimer = setTimeout(async () => {
         const query = input.value.trim();
 
         if (query.length < 2) {
           suggestions.classList.add('hidden');
+          input.setAttribute('aria-expanded', 'false');
           return;
         }
 
+        // Show loading state
+        suggestionsList.innerHTML = `
+          <div class="px-3 py-2 text-sm text-secondary-500 flex items-center gap-2">
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Searching...
+          </div>
+        `;
+        suggestions.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+
         try {
-          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5`);
+          abortController = new AbortController();
+          const timeoutId = setTimeout(() => abortController?.abort(), 5000);
+
+          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5`, {
+            signal: abortController.signal,
+          });
+          clearTimeout(timeoutId);
+
+          if (!res.ok) throw new Error('Search failed');
+
           const data = await res.json();
 
           if (data.results && data.results.length > 0) {
             suggestionsList.innerHTML = data.results
               .map(
                 (item: { slug: string; question: string }) => `
-              <a href="/q/${item.slug}" class="block px-3 py-2 rounded-lg hover:bg-secondary-50 transition-colors">
-                <span class="text-sm text-secondary-900">${item.question}</span>
+              <a href="/q/${encodeURIComponent(item.slug)}" role="option" class="block px-3 py-2.5 min-h-[44px] rounded-lg hover:bg-secondary-50 transition-colors">
+                <span class="text-sm text-secondary-900">${escapeHtml(item.question)}</span>
               </a>
             `
               )
               .join('');
             suggestions.classList.remove('hidden');
+            input.setAttribute('aria-expanded', 'true');
           } else {
-            suggestions.classList.add('hidden');
+            suggestionsList.innerHTML = `
+              <div class="px-3 py-2.5 text-sm text-secondary-500">
+                No results found
+              </div>
+            `;
+            suggestions.classList.remove('hidden');
           }
-        } catch {
-          suggestions.classList.add('hidden');
+        } catch (error) {
+          if ((error as Error).name !== 'AbortError') {
+            suggestionsList.innerHTML = `
+              <div class="px-3 py-2.5 text-sm text-red-500">
+                Search error. Try again.
+              </div>
+            `;
+            suggestions.classList.remove('hidden');
+          }
+        } finally {
+          abortController = null;
         }
-      }, 200);
+      }, 300);
     });
 
     // Hide suggestions when clicking outside
     document.addEventListener('click', (e) => {
       if (!form.contains(e.target as Node)) {
         suggestions.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
       }
     });
 
@@ -132,7 +185,21 @@ const iconSizes = {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         suggestions.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
+        if (abortController) {
+          abortController.abort();
+          abortController = null;
+        }
       }
     });
   });
+
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 </script>

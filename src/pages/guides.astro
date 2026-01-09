@@ -1,155 +1,121 @@
 ---
 import Base from '../layouts/Base.astro';
+import { guides } from '../lib/guides';
 import { getCategories, type Category } from '../lib/supabase';
 
-// Fetch popular questions grouped by category for guides
 let categories: Category[] = [];
 try {
   categories = await getCategories();
 } catch (error) {
   console.error('Error fetching categories:', error);
 }
-
-const guides = [
-  {
-    title: 'Getting Started with Proxies',
-    description: 'Learn the basics of proxies, how they work, and when to use them.',
-    slug: 'getting-started',
-    category: 'Beginners',
-  },
-  {
-    title: 'Choosing the Right Proxy Type',
-    description: 'Understand the differences between residential, datacenter, mobile, and ISP proxies.',
-    slug: 'choosing-proxy-type',
-    category: 'Proxy Types',
-  },
-  {
-    title: 'Web Scraping Best Practices',
-    description: 'Master web scraping with proxies using anti-detection techniques and rate limiting.',
-    slug: 'web-scraping-guide',
-    category: 'Web Scraping',
-  },
-  {
-    title: 'Residential Proxies Explained',
-    description: 'Everything you need to know about residential proxies and when to use them.',
-    slug: 'residential-proxies',
-    category: 'Residential Proxies',
-  },
-  {
-    title: 'Datacenter Proxies Guide',
-    description: 'Fast and affordable datacenter proxies for high-volume scraping.',
-    slug: 'datacenter-proxies',
-    category: 'Datacenter Proxies',
-  },
-  {
-    title: 'Mobile Proxies Tutorial',
-    description: 'Use mobile IP addresses for social media and app automation.',
-    slug: 'mobile-proxies',
-    category: 'Mobile Proxies',
-  },
-  {
-    title: 'Proxy Provider Comparison',
-    description: 'Compare top proxy providers by features, pricing, and performance.',
-    slug: 'provider-comparison',
-    category: 'Providers',
-  },
-  {
-    title: 'Troubleshooting Proxy Issues',
-    description: 'Fix common proxy problems like blocks, timeouts, and errors.',
-    slug: 'troubleshooting',
-    category: 'Troubleshooting',
-  },
-];
 ---
 
-<Base title="Proxy Guides | ProxyFAQs" description="Comprehensive guides to help you master proxies, web scraping, and data collection.">
-  <div class="bg-gradient-to-b from-blue-50 to-white py-16">
-    <div class="container mx-auto px-4">
-      <h1 class="text-5xl font-bold text-gray-900 mb-4 text-center">
-        Proxy Guides
-      </h1>
-      <p class="text-xl text-gray-600 text-center max-w-3xl mx-auto">
-        Comprehensive guides to help you master proxies, web scraping, and data collection.
+<Base
+  title="Proxy Guides | ProxyFAQs"
+  description="Comprehensive guides to help you master proxies, web scraping, and data collection."
+>
+  <section class="bg-gradient-to-b from-primary-50 via-white to-white py-16">
+    <div class="container-custom text-center">
+      <p class="badge-primary mx-auto w-fit mb-4">Guides</p>
+      <h1 class="text-4xl md:text-5xl font-bold text-secondary-900 mb-4">Proxy Guides</h1>
+      <p class="text-lg text-secondary-600 max-w-3xl mx-auto">
+        Clear, practical guides to help you pick the right proxies, avoid blocks, and run reliable
+        scraping pipelines.
       </p>
     </div>
-  </div>
+  </section>
 
-  <div class="container mx-auto px-4 py-12">
-    <!-- Featured Guides Grid -->
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-      {guides.map(guide => (
-        <a
-          href={`/category/${guide.slug}`}
-          class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
-        >
-          <div class="text-sm font-medium text-blue-600 mb-2">{guide.category}</div>
-          <h3 class="text-xl font-bold text-gray-900 mb-3">{guide.title}</h3>
-          <p class="text-gray-600 mb-4">{guide.description}</p>
-          <div class="text-blue-600 font-medium hover:text-blue-700">
-            Read Guide →
-          </div>
-        </a>
-      ))}
-    </div>
-
-    <!-- Browse by Category -->
-    <div class="border-t border-gray-200 pt-12">
-      <h2 class="text-3xl font-bold text-gray-900 mb-8">Browse by Category</h2>
-
-      {categories && categories.length > 0 ? (
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map(category => (
-            <a
-              href={`/category/${category.slug}`}
-              class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors"
-            >
-              <div>
-                <h3 class="font-semibold text-gray-900">{category.name}</h3>
-                <p class="text-sm text-gray-600">
-                  {category.question_count || 0} questions
-                </p>
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {
+          guides.map((guide) => (
+            <a href={`/guides/${guide.slug}`} class="card-hover group">
+              <div class="flex items-center justify-between text-xs text-secondary-500 mb-2">
+                <span class="badge-secondary">{guide.category}</span>
+                <span>{guide.readingTime}</span>
               </div>
-              <svg
-                class="w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              <h2 class="text-xl font-semibold text-secondary-900 group-hover:text-primary-600 transition-colors mb-3">
+                {guide.title}
+              </h2>
+              <p class="text-secondary-600 mb-4 line-clamp-3">{guide.description}</p>
+              <span class="text-primary-600 font-medium">Read guide →</span>
             </a>
-          ))}
-        </div>
-      ) : (
-        <p class="text-gray-600">Loading categories...</p>
-      )}
-    </div>
-
-    <!-- Quick Links -->
-    <div class="mt-16 bg-blue-50 rounded-lg p-8">
-      <h2 class="text-2xl font-bold text-gray-900 mb-4">Need Help?</h2>
-      <p class="text-gray-700 mb-6">
-        Can't find what you're looking for? Try our AI chat assistant or browse all questions.
-      </p>
-      <div class="flex gap-4">
-        <a
-          href="/search"
-          class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          Search Questions
-        </a>
-        <a
-          href="/providers"
-          class="bg-white text-blue-600 px-6 py-3 rounded-lg font-medium border border-blue-600 hover:bg-blue-50 transition-colors"
-        >
-          Compare Providers
-        </a>
+          ))
+        }
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="py-12 bg-secondary-50">
+    <div class="container-custom">
+      <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
+        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900">Browse by Category</h2>
+        <a href="/category" class="text-primary-600 font-medium"> View all categories → </a>
+      </div>
+
+      {
+        categories && categories.length > 0 ? (
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((category) => (
+              <a
+                href={`/category/${category.slug}`}
+                class="card-hover flex items-center justify-between"
+              >
+                <div>
+                  <h3 class="font-semibold text-secondary-900">{category.name}</h3>
+                  <p class="text-sm text-secondary-600">{category.question_count || 0} questions</p>
+                </div>
+                <svg
+                  class="w-5 h-5 text-secondary-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="text-secondary-600">Loading categories...</p>
+        )
+      }
+    </div>
+  </section>
+
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <div class="card bg-gradient-to-br from-primary-50 to-white">
+        <div class="grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-3">
+              Need a custom recommendation?
+            </h2>
+            <p class="text-secondary-600 mb-4">
+              Ask our AI assistant for proxy recommendations based on your target site and volume.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <a href="/search" class="btn-primary"> Search Questions </a>
+              <a href="/use-cases" class="btn-secondary"> Browse Use Cases </a>
+              <a href="/providers" class="btn-secondary"> Compare Providers </a>
+            </div>
+          </div>
+          <div class="text-sm text-secondary-600">
+            <ul class="space-y-2">
+              <li>• Fast answers to proxy setup questions</li>
+              <li>• Guidance on block troubleshooting</li>
+              <li>• Tips for scraping workflows</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </Base>

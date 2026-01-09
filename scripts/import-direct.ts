@@ -4,45 +4,45 @@
  * Imports all data directly to PostgreSQL using COPY command
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { Pool } from "pg";
+import * as fs from 'fs';
+import * as path from 'path';
+import { Pool } from 'pg';
+import { env } from '../src/lib/env';
 
 // PostgreSQL connection
 const pool = new Pool({
-  host: "supabase-db",
+  host: 'supabase-db',
   port: 5432,
-  database: "postgres",
-  user: "postgres",
-  password: process.env.DB_PASSWORD || "your_password_here",
+  database: 'postgres',
+  user: 'postgres',
+  password: env.DB_PASSWORD,
 });
 
-const DATA_DIR = path.join(process.cwd(), "../data");
+const DATA_DIR = path.join(process.cwd(), '../data');
 
 // Utility functions
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
     .substring(0, 200);
 }
 
 function mapCategoryKeyword(keyword: string): string {
   const lowerKeyword = keyword.toLowerCase();
-  if (lowerKeyword.includes("residential")) return "residential-proxies";
-  if (lowerKeyword.includes("datacenter")) return "datacenter-proxies";
-  if (lowerKeyword.includes("mobile")) return "mobile-proxies";
-  if (lowerKeyword.includes("scraping") || lowerKeyword.includes("scraper"))
-    return "web-scraping";
-  if (lowerKeyword.includes("api")) return "scraper-api";
-  if (lowerKeyword.includes("provider")) return "proxy-providers";
-  return "proxy-basics";
+  if (lowerKeyword.includes('residential')) return 'residential-proxies';
+  if (lowerKeyword.includes('datacenter')) return 'datacenter-proxies';
+  if (lowerKeyword.includes('mobile')) return 'mobile-proxies';
+  if (lowerKeyword.includes('scraping') || lowerKeyword.includes('scraper')) return 'web-scraping';
+  if (lowerKeyword.includes('api')) return 'scraper-api';
+  if (lowerKeyword.includes('provider')) return 'proxy-providers';
+  return 'proxy-basics';
 }
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
-  let current = "";
+  let current = '';
   let inQuotes = false;
 
   for (let i = 0; i < line.length; i++) {
@@ -54,9 +54,9 @@ function parseCSVLine(line: string): string[] {
       i++;
     } else if (char === '"') {
       inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+    } else if (char === ',' && !inQuotes) {
       result.push(current);
-      current = "";
+      current = '';
     } else {
       current += char;
     }
@@ -66,14 +66,14 @@ function parseCSVLine(line: string): string[] {
 }
 
 async function importPAAData() {
-  console.log("🚀 Starting PAA data import...\n");
+  console.log('🚀 Starting PAA data import...\n');
 
   const files = [
-    "google-paa-proxy-level8-25-12-2025.csv",
-    "google-paa-proxies-level8-26-12-2025.csv",
-    "google-paa-residential-proxy-level8-25-12-2025.csv",
-    "google-paa-web-scraping-level8-25-12-2025.csv",
-    "google-paa-scraper-api-level8-26-12-2025.csv",
+    'google-paa-proxy-level8-25-12-2025.csv',
+    'google-paa-proxies-level8-26-12-2025.csv',
+    'google-paa-residential-proxy-level8-25-12-2025.csv',
+    'google-paa-web-scraping-level8-25-12-2025.csv',
+    'google-paa-scraper-api-level8-26-12-2025.csv',
   ];
 
   let totalImported = 0;
@@ -88,19 +88,15 @@ async function importPAAData() {
 
     console.log(`📄 Processing ${filename}...`);
 
-    const content = fs.readFileSync(filePath, "utf-8");
-    const lines = content.split("\n").filter((line) => line.trim());
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.split('\n').filter((line) => line.trim());
     const header = parseCSVLine(lines[0]);
 
     // Find column indexes
-    const questionIdx = header.findIndex((h) =>
-      h.toLowerCase().includes("paa title"),
-    );
-    const parentIdx = header.findIndex((h) =>
-      h.toLowerCase().includes("parent"),
-    );
-    const textIdx = header.findIndex((h) => h.toLowerCase().includes("text"));
-    const urlIdx = header.findIndex((h) => h.toLowerCase().includes("url"));
+    const questionIdx = header.findIndex((h) => h.toLowerCase().includes('paa title'));
+    const parentIdx = header.findIndex((h) => h.toLowerCase().includes('parent'));
+    const textIdx = header.findIndex((h) => h.toLowerCase().includes('text'));
+    const urlIdx = header.findIndex((h) => h.toLowerCase().includes('url'));
 
     let imported = 0;
     let skipped = 0;
@@ -137,27 +133,23 @@ async function importPAAData() {
             question,
             answer,
             `<p>${answer}</p>`,
-            category
-              .replace(/-/g, " ")
-              .replace(/\b\w/g, (l) => l.toUpperCase()),
+            category.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
             categorySlug,
-            parent || "",
-            sourceUrl || "",
+            parent || '',
+            sourceUrl || '',
             question,
             answer.substring(0, 160),
-          ],
+          ]
         );
 
         seenSlugs.add(slug);
         imported++;
 
         if (imported % 100 === 0) {
-          process.stdout.write(
-            `\r   ✓ Imported: ${imported}, Skipped: ${skipped}`,
-          );
+          process.stdout.write(`\r   ✓ Imported: ${imported}, Skipped: ${skipped}`);
         }
       } catch (error: any) {
-        if (!error.message.includes("duplicate")) {
+        if (!error.message.includes('duplicate')) {
           console.error(`\nError importing question: ${error.message}`);
         }
       }
@@ -168,7 +160,7 @@ async function importPAAData() {
   }
 
   // Update category counts
-  console.log("📊 Updating category counts...");
+  console.log('📊 Updating category counts...');
   await pool.query(`
     UPDATE proxyfaqs.categories c
     SET question_count = (
@@ -181,18 +173,18 @@ async function importPAAData() {
 }
 
 async function importProviders() {
-  console.log("🏢 Starting provider data import...\n");
+  console.log('🏢 Starting provider data import...\n');
 
-  const productFile = path.join(DATA_DIR, "proxy merchant/Product.csv");
-  const domainFile = path.join(DATA_DIR, "proxy merchant/Domain.csv");
+  const productFile = path.join(DATA_DIR, 'proxy merchant/Product.csv');
+  const domainFile = path.join(DATA_DIR, 'proxy merchant/Domain.csv');
 
   if (!fs.existsSync(productFile)) {
-    console.log("⚠️  Product.csv not found, skipping providers\n");
+    console.log('⚠️  Product.csv not found, skipping providers\n');
     return;
   }
 
-  const productContent = fs.readFileSync(productFile, "utf-8");
-  const productLines = productContent.split("\n").filter((line) => line.trim());
+  const productContent = fs.readFileSync(productFile, 'utf-8');
+  const productLines = productContent.split('\n').filter((line) => line.trim());
 
   const providers = new Map<string, any>();
 
@@ -239,14 +231,14 @@ async function importProviders() {
           `${provider.name} proxy service`,
           `https://${domain}`,
           JSON.stringify(provider.features),
-          ["High quality IPs", "Good customer support"],
-          ["Premium pricing"],
+          ['High quality IPs', 'Good customer support'],
+          ['Premium pricing'],
           imported + 1,
-        ],
+        ]
       );
       imported++;
     } catch (error: any) {
-      if (!error.message.includes("duplicate")) {
+      if (!error.message.includes('duplicate')) {
         console.error(`Error importing provider: ${error.message}`);
       }
     }
@@ -256,13 +248,13 @@ async function importProviders() {
 }
 
 async function main() {
-  console.log("=".repeat(60));
-  console.log("ProxyFAQs Data Import");
-  console.log("=".repeat(60) + "\n");
+  console.log('='.repeat(60));
+  console.log('ProxyFAQs Data Import');
+  console.log('='.repeat(60) + '\n');
 
   try {
-    await pool.query("SELECT 1"); // Test connection
-    console.log("✓ Database connection successful\n");
+    await pool.query('SELECT 1'); // Test connection
+    console.log('✓ Database connection successful\n');
 
     await importPAAData();
     await importProviders();
@@ -275,16 +267,16 @@ async function main() {
         (SELECT COUNT(*) FROM proxyfaqs.categories) as categories
     `);
 
-    console.log("=".repeat(60));
-    console.log("📊 Final Statistics:");
-    console.log("=".repeat(60));
+    console.log('='.repeat(60));
+    console.log('📊 Final Statistics:');
+    console.log('='.repeat(60));
     console.log(`Questions:  ${stats.rows[0].questions.toLocaleString()}`);
     console.log(`Providers:  ${stats.rows[0].providers.toLocaleString()}`);
     console.log(`Categories: ${stats.rows[0].categories.toLocaleString()}`);
-    console.log("=".repeat(60) + "\n");
-    console.log("🎉 Import completed successfully!\n");
+    console.log('='.repeat(60) + '\n');
+    console.log('🎉 Import completed successfully!\n');
   } catch (error: any) {
-    console.error("❌ Import failed:", error.message);
+    console.error('❌ Import failed:', error.message);
     process.exit(1);
   } finally {
     await pool.end();

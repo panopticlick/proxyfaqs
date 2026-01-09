@@ -1,0 +1,150 @@
+---
+import Base from '../../layouts/Base.astro';
+import { guides, getGuideBySlug } from '../../lib/guides';
+import { generateBreadcrumbSchema, generateArticleSchema } from '../../lib/utils';
+import AffiliateProviderCard from '../../components/AffiliateProviderCard.astro';
+import {
+  getProvidersForType,
+  getGeneralProviders,
+  inferProviderTypeFromGuide,
+} from '../../lib/affiliate';
+import { marked } from 'marked';
+
+export async function getStaticPaths() {
+  return guides.map((guide) => ({ params: { slug: guide.slug } }));
+}
+
+const { slug } = Astro.params;
+const guide = getGuideBySlug(slug);
+
+if (!guide) {
+  return Astro.redirect('/404');
+}
+
+const siteUrl = 'https://proxyfaqs.com';
+const pageUrl = `${siteUrl}/guides/${guide.slug}`;
+const providerType = inferProviderTypeFromGuide(guide.slug);
+const providers =
+  providerType === 'general' ? getGeneralProviders(3) : getProvidersForType(providerType, 3);
+
+const jsonLd = [
+  generateBreadcrumbSchema([
+    { name: 'Home', url: siteUrl },
+    { name: 'Guides', url: `${siteUrl}/guides` },
+    { name: guide.title, url: pageUrl },
+  ]),
+  generateArticleSchema({
+    title: guide.title,
+    description: guide.description,
+    url: pageUrl,
+    datePublished: guide.updatedAt,
+    dateModified: guide.updatedAt,
+  }),
+];
+
+const contentHtml = await marked.parse(guide.content);
+---
+
+<Base
+  title={`${guide.title} | ProxyFAQs`}
+  description={guide.description}
+  canonicalUrl={pageUrl}
+  jsonLd={jsonLd}
+>
+  <article class="py-10 bg-secondary-50">
+    <div class="container-custom">
+      <nav class="mb-6 text-sm text-secondary-500" aria-label="Breadcrumb">
+        <ol class="flex flex-wrap items-center gap-2">
+          <li>
+            <a href="/" class="hover:text-primary-600">Home</a>
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+              ></path>
+            </svg>
+            <a href="/guides" class="hover:text-primary-600">Guides</a>
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+              ></path>
+            </svg>
+            <span class="text-secondary-900">{guide.title}</span>
+          </li>
+        </ol>
+      </nav>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <main class="lg:col-span-2">
+          <div class="card">
+            <div class="flex flex-wrap items-center gap-3 text-sm text-secondary-500 mb-4">
+              <span class="badge-secondary">{guide.category}</span>
+              <span>{guide.readingTime}</span>
+              <span>Updated {guide.updatedAt}</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-secondary-900 mb-4">
+              {guide.title}
+            </h1>
+            <p class="text-lg text-secondary-600 mb-6">
+              {guide.description}
+            </p>
+            <div class="prose-custom" set:html={contentHtml} />
+          </div>
+
+          <div class="card mt-6">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Recommended providers</h2>
+            <p class="text-secondary-600 mb-6">
+              Curated providers based on this guide’s focus. Affiliate links disclosed.
+            </p>
+            <div class="grid sm:grid-cols-2 gap-4">
+              {providers.map((provider) => <AffiliateProviderCard provider={provider} />)}
+            </div>
+            <p class="text-xs text-secondary-500 mt-4">
+              Affiliate disclosure: we may earn a commission at no extra cost to you.
+            </p>
+          </div>
+        </main>
+
+        <aside class="lg:col-span-1">
+          <div class="sticky top-24 space-y-6">
+            <div class="card">
+              <h2 class="font-semibold text-secondary-900 mb-3">Recommended next</h2>
+              <div class="space-y-3">
+                {
+                  guides
+                    .filter((item) => item.slug !== guide.slug)
+                    .slice(0, 4)
+                    .map((item) => (
+                      <a
+                        href={`/guides/${item.slug}`}
+                        class="block p-3 rounded-lg hover:bg-secondary-50 transition-colors"
+                      >
+                        <div class="text-sm text-secondary-700 font-medium">{item.title}</div>
+                        <div class="text-xs text-secondary-500">{item.readingTime}</div>
+                      </a>
+                    ))
+                }
+              </div>
+            </div>
+
+            <div class="card bg-gradient-to-br from-primary-50 to-white">
+              <h2 class="font-semibold text-secondary-900 mb-2">Need tailored advice?</h2>
+              <p class="text-sm text-secondary-600 mb-4">
+                Ask our AI assistant for proxy recommendations based on your exact use case.
+              </p>
+              <div class="space-y-2">
+                <a href="/search" class="btn-primary w-full text-center text-sm">
+                  Search Questions
+                </a>
+                <a href="/providers" class="btn-secondary w-full text-center text-sm">
+                  Compare Providers
+                </a>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </article>
+</Base>

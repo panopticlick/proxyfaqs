@@ -1,0 +1,59 @@
+---
+import Base from '../layouts/Base.astro';
+
+const contactEmail = 'hello@proxyfaqs.com';
+---
+
+<Base
+  title="Contact ProxyFAQs"
+  description="Get in touch with the ProxyFAQs team for partnerships, feedback, or support."
+>
+  <section class="bg-gradient-to-b from-primary-50 via-white to-white py-16">
+    <div class="container-custom text-center">
+      <p class="badge-primary mx-auto w-fit mb-4">Contact</p>
+      <h1 class="text-4xl md:text-5xl font-bold text-secondary-900 mb-4">Contact ProxyFAQs</h1>
+      <p class="text-lg text-secondary-600 max-w-3xl mx-auto">
+        Have a question, partnership idea, or need help with proxy strategy? We’d love to hear from
+        you.
+      </p>
+    </div>
+  </section>
+
+  <section class="py-12 bg-white">
+    <div class="container-custom grid gap-8 lg:grid-cols-3">
+      <div class="card lg:col-span-2">
+        <h2 class="text-2xl font-bold text-secondary-900 mb-4">Email us</h2>
+        <p class="text-secondary-600 mb-6">
+          Send us a message and we’ll reply within 1-2 business days.
+        </p>
+        <a href={`mailto:${contactEmail}`} class="btn-primary">
+          {contactEmail}
+        </a>
+      </div>
+
+      <div class="card bg-gradient-to-br from-primary-50 to-white">
+        <h3 class="text-lg font-semibold text-secondary-900 mb-3">What to include</h3>
+        <ul class="text-sm text-secondary-600 space-y-2">
+          <li>• Your target sites or use case</li>
+          <li>• Current proxy setup and volumes</li>
+          <li>• Any block or reliability issues</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-12 bg-secondary-50">
+    <div class="container-custom">
+      <div class="card text-center">
+        <h2 class="text-2xl font-bold text-secondary-900 mb-4">Prefer self-serve?</h2>
+        <p class="text-secondary-600 mb-6">
+          Browse our knowledge base, use cases, and guides to get answers fast.
+        </p>
+        <div class="flex flex-wrap justify-center gap-4">
+          <a href="/search" class="btn-primary">Search Questions</a>
+          <a href="/use-cases" class="btn-secondary">Browse Use Cases</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,25 @@
+---
+import type { AffiliateProvider } from '../lib/affiliate';
+
+export interface Props {
+  provider: AffiliateProvider;
+}
+
+const { provider } = Astro.props;
+---
+
+<div class="card-hover flex flex-col h-full">
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="text-lg font-semibold text-secondary-900">{provider.name}</h3>
+    <span class="badge-primary capitalize">{provider.type}</span>
+  </div>
+  <p class="text-sm text-secondary-600 mb-4 flex-1">{provider.tagline}</p>
+  <a
+    href={provider.href}
+    target="_blank"
+    rel="noopener sponsored"
+    class="btn-primary text-sm text-center"
+  >
+    Visit {provider.name}
+  </a>
+</div>
