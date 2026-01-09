@@ -7,6 +7,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Pool } from "pg";
+import { env } from "../src/lib/env";
 
 // PostgreSQL connection
 const pool = new Pool({
@@ -14,7 +15,7 @@ const pool = new Pool({
   port: 5432,
   database: "postgres",
   user: "postgres",
-  password: process.env.DB_PASSWORD || "your_password_here",
+  password: env.DB_PASSWORD,
 });
 
 const DATA_DIR = path.join(process.cwd(), "../data");

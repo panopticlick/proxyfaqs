@@ -6,13 +6,12 @@
 import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
 import * as path from "path";
+import { env } from "../src/lib/env";
 
 // Configuration
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  "postgresql://postgres:your_password@supabase-db:5432/postgres";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
-const SITE_URL = process.env.SITE_URL || "https://proxyfaqs.com";
+const SUPABASE_URL = env.SUPABASE_URL || "";
+const SUPABASE_KEY = env.SUPABASE_SERVICE_KEY || "";
+const SITE_URL = env.SITE_URL || "https://proxyfaqs.com";
 const OUTPUT_PATH = path.join(process.cwd(), "public/sitemap.xml");
 
 // Initialize Supabase client

@@ -3,13 +3,14 @@
  */
 
 import { Client } from "pg";
+import { env } from "../src/lib/env";
 
 const DB_CONFIG = {
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5433"),
+  host: env.DB_HOST,
+  port: env.DB_PORT,
   database: "postgres",
   user: "postgres",
-  password: process.env.DB_PASSWORD || "",
+  password: env.DB_PASSWORD,
 };
 
 async function cleanup() {

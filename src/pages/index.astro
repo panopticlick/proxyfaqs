@@ -1,9 +1,9 @@
 ---
-import Base from '@/layouts/Base.astro';
-import SearchBox from '@/components/SearchBox.astro';
-import QuestionCard from '@/components/QuestionCard.astro';
-import ProviderCard from '@/components/ProviderCard.astro';
-import { getCategories, getPopularQuestions, getProviders, getStats } from '@/lib/supabase';
+import Base from '../layouts/Base.astro';
+import SearchBox from '../components/SearchBox.astro';
+import QuestionCard from '../components/QuestionCard.astro';
+import ProviderCard from '../components/ProviderCard.astro';
+import { getCategories, getPopularQuestions, getProviders, getStats } from '../lib/supabase';
 
 // Fetch data at build time
 let categories: any[] = [];

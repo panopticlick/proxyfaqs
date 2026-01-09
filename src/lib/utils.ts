@@ -251,3 +251,107 @@ export function rateLimit<T extends (...args: unknown[]) => unknown>(
     });
   }) as T;
 }
+
+/**
+ * Generate CollectionPage schema for category/index pages
+ */
+export function generateCollectionPageSchema(data: {
+  name: string;
+  description: string;
+  url: string;
+  itemCount?: number;
+  items?: Array<{ name: string; url: string }>;
+}) {
+  const schema: any = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: data.name,
+    description: data.description,
+    url: data.url,
+  };
+
+  if (data.itemCount !== undefined) {
+    schema.numberOfItems = data.itemCount;
+  }
+
+  if (data.items && data.items.length > 0) {
+    schema.mainEntity = {
+      "@type": "ItemList",
+      itemListElement: data.items.slice(0, 10).map((item, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: {
+          "@type": "Thing",
+          name: item.name,
+          url: item.url,
+        },
+      })),
+    };
+  }
+
+  return schema;
+}
+
+/**
+ * Generate detailed Product schema for providers
+ */
+export function generateProductSchema(data: {
+  name: string;
+  description: string;
+  url: string;
+  logo?: string;
+  rating?: number;
+  reviewCount?: number;
+  priceRange?: string;
+  offers?: Array<{
+    price: string;
+    priceCurrency: string;
+    availability: string;
+    url: string;
+  }>;
+}) {
+  const schema: any = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: data.name,
+    description: data.description,
+    url: data.url,
+    brand: {
+      "@type": "Brand",
+      name: data.name,
+    },
+  };
+
+  if (data.logo) {
+    schema.image = data.logo;
+  }
+
+  if (data.rating) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: data.rating,
+      bestRating: 5,
+      worstRating: 1,
+      ratingCount: data.reviewCount || 1,
+    };
+  }
+
+  if (data.offers && data.offers.length > 0) {
+    schema.offers = data.offers.map((offer) => ({
+      "@type": "Offer",
+      price: offer.price,
+      priceCurrency: offer.priceCurrency,
+      availability: `https://schema.org/${offer.availability}`,
+      url: offer.url,
+    }));
+  } else if (data.priceRange) {
+    schema.offers = {
+      "@type": "AggregateOffer",
+      priceCurrency: "USD",
+      priceRange: data.priceRange,
+      availability: "https://schema.org/InStock",
+    };
+  }
+
+  return schema;
+}

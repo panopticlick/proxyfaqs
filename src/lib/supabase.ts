@@ -57,6 +57,7 @@ export interface Provider {
   affiliate_url: string | null;
   affiliate_code: string | null;
   rating: number | null;
+  review_count?: number | null;
   rank: number | null;
   review_html: string | null;
   created_at: string;

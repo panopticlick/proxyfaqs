@@ -7,14 +7,15 @@ import { Client } from "pg";
 import * as fs from "fs";
 import * as path from "path";
 import Papa from "papaparse";
+import { env } from "../src/lib/env";
 
 // Configuration - Direct PostgreSQL connection via SSH tunnel
 const DB_CONFIG = {
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5433"),
+  host: env.DB_HOST,
+  port: env.DB_PORT,
   database: "postgres",
   user: "postgres",
-  password: process.env.DB_PASSWORD || "",
+  password: env.DB_PASSWORD,
 };
 
 const DATA_DIR = path.join(process.cwd(), "../data/proxy merchant");

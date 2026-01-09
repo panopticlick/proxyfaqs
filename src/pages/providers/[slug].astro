@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getProvider, getAllProviderSlugs, getProviders, type Provider } from '../../lib/supabase';
-import { generateBreadcrumbSchema } from '../../lib/utils';
+import { generateBreadcrumbSchema, generateProductSchema } from '../../lib/utils';
 
 export async function getStaticPaths() {
   try {
@@ -38,37 +38,43 @@ const pageUrl = `${siteUrl}/providers/${slug}`;
 
 const stars = provider.rating ? Math.round(provider.rating) : 0;
 
+// Build price range from pricing data
+const priceRange = provider.pricing?.starting_price
+  ? `$${provider.pricing.starting_price}+`
+  : undefined;
+
 const jsonLd = [
   generateBreadcrumbSchema([
     { name: 'Home', url: siteUrl },
     { name: 'Providers', url: `${siteUrl}/providers` },
     { name: provider.name, url: pageUrl },
   ]),
+  generateProductSchema({
+    name: provider.name,
+    description: provider.description || `${provider.name} proxy service review`,
+    url: pageUrl,
+    logo: provider.logo_url ?? undefined,
+    rating: provider.rating ?? undefined,
+    reviewCount: provider.review_count ?? undefined,
+    priceRange,
+  }),
   {
     '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: provider.name,
-    description: provider.description,
-    url: pageUrl,
-    image: provider.logo_url,
-    brand: {
-      '@type': 'Brand',
+    '@type': 'Review',
+    itemReviewed: {
+      '@type': 'Organization',
       name: provider.name,
     },
-    aggregateRating: provider.rating ? {
-      '@type': 'AggregateRating',
+    author: {
+      '@type': 'Organization',
+      name: 'ProxyFAQs',
+    },
+    reviewRating: provider.rating ? {
+      '@type': 'Rating',
       ratingValue: provider.rating,
       bestRating: 5,
-      worstRating: 1,
     } : undefined,
-    review: {
-      '@type': 'Review',
-      author: {
-        '@type': 'Organization',
-        name: 'ProxyFAQs',
-      },
-      reviewBody: provider.description,
-    },
+    reviewBody: provider.description ?? '',
   },
 ];
 ---

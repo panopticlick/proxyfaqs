@@ -1,8 +1,9 @@
 ---
-import '@/styles/global.css';
-import Header from '@/components/Header.astro';
-import Footer from '@/components/Footer.astro';
-import ChatWidget from '@/components/chat/ChatWidget.astro';
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ChatWidget from '../components/chat/ChatWidget.astro';
+import { env } from "../lib/env";
 
 export interface Props {
   title: string;
@@ -11,6 +12,8 @@ export interface Props {
   canonicalUrl?: string;
   noindex?: boolean;
   jsonLd?: object | object[];
+  prevUrl?: string;
+  nextUrl?: string;
 }
 
 const {
@@ -20,9 +23,11 @@ const {
   canonicalUrl,
   noindex = false,
   jsonLd,
+  prevUrl,
+  nextUrl,
 } = Astro.props;
 
-const siteUrl = import.meta.env.SITE || 'https://proxyfaqs.com';
+const siteUrl = env.SITE;
 const currentUrl = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
 const fullOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, siteUrl).href;
 
@@ -44,6 +49,10 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
 
     <!-- Canonical URL -->
     <link rel="canonical" href={currentUrl} />
+
+    <!-- Pagination Links -->
+    {prevUrl && <link rel="prev" href={prevUrl} />}
+    {nextUrl && <link rel="next" href={nextUrl} />}
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -74,11 +83,11 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
 
     <!-- JSON-LD Structured Data -->
     {jsonLd && (
-      <script type="application/ld+json" set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : [jsonLd])} />
+      <script is:inline type="application/ld+json" set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : [jsonLd])} />
     )}
 
     <!-- Default Organization Schema -->
-    <script type="application/ld+json">
+    <script is:inline type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Organization",
@@ -100,5 +109,44 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
     <Footer />
 
     <ChatWidget />
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookie-consent" class="fixed bottom-0 left-0 right-0 bg-secondary-900 text-white p-4 z-50 hidden">
+      <div class="container-custom flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-secondary-300">
+          We use cookies to improve your experience and analyze site usage.
+          <a href="/privacy" class="text-primary-400 hover:underline">Learn more</a>
+        </p>
+        <div class="flex gap-3">
+          <button id="reject-cookies" class="px-4 py-2 text-sm bg-secondary-700 hover:bg-secondary-600 rounded-lg transition-colors">
+            Reject Non-Essential
+          </button>
+          <button id="accept-cookies" class="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+            Accept All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function() {
+        const consent = localStorage.getItem('cookie-consent');
+        const banner = document.getElementById('cookie-consent');
+
+        if (!consent && banner) {
+          banner.classList.remove('hidden');
+        }
+
+        document.getElementById('accept-cookies')?.addEventListener('click', function() {
+          localStorage.setItem('cookie-consent', 'accepted');
+          banner?.classList.add('hidden');
+        });
+
+        document.getElementById('reject-cookies')?.addEventListener('click', function() {
+          localStorage.setItem('cookie-consent', 'rejected');
+          banner?.classList.add('hidden');
+        });
+      })();
+    </script>
   </body>
 </html>

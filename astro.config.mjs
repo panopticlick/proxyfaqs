@@ -1,9 +1,17 @@
 import { defineConfig } from "astro/config";
 import tailwind from "@astrojs/tailwind";
 import sitemap from "@astrojs/sitemap";
+import cloudflare from "@astrojs/cloudflare";
+import { z } from "zod";
+
+const buildEnv = z
+  .object({
+    SITE_URL: z.string().url().default("https://proxyfaqs.com"),
+  })
+  .parse(process.env);
 
 export default defineConfig({
-  site: "https://proxyfaqs.com",
+  site: buildEnv.SITE_URL,
   integrations: [
     tailwind(),
     sitemap({
@@ -12,15 +20,18 @@ export default defineConfig({
       priority: 0.7,
     }),
   ],
-  output: "static",
+  output: "hybrid",
+  adapter: cloudflare({
+    platformProxy: {
+      enabled: true,
+    },
+  }),
   build: {
     format: "directory",
   },
   vite: {
     define: {
-      "import.meta.env.SITE_URL": JSON.stringify(
-        process.env.SITE_URL || "https://proxyfaqs.com",
-      ),
+      "import.meta.env.SITE_URL": JSON.stringify(buildEnv.SITE_URL),
     },
   },
 });

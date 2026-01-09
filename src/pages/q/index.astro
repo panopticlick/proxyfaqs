@@ -1,7 +1,7 @@
 ---
-import Base from '@/layouts/Base.astro';
-import QuestionCard from '@/components/QuestionCard.astro';
-import { getPopularQuestions, getCategories } from '@/lib/supabase';
+import Base from '../../layouts/Base.astro';
+import QuestionCard from '../../components/QuestionCard.astro';
+import { getPopularQuestions, getCategories } from '../../lib/supabase';
 
 let questions: any[] = [];
 let categories: any[] = [];

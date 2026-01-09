@@ -1,8 +1,8 @@
 ---
-import Base from '@/layouts/Base.astro';
-import SearchBox from '@/components/SearchBox.astro';
-import QuestionCard from '@/components/QuestionCard.astro';
-import { searchQuestions, getPopularQuestions } from '@/lib/supabase';
+import Base from '../layouts/Base.astro';
+import SearchBox from '../components/SearchBox.astro';
+import QuestionCard from '../components/QuestionCard.astro';
+import { searchQuestions, getPopularQuestions } from '../lib/supabase';
 
 const query = Astro.url.searchParams.get('q') || '';
 

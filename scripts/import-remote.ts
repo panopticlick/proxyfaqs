@@ -7,14 +7,15 @@
 import * as fs from "fs";
 import * as path from "path";
 import { Pool } from "pg";
+import { env } from "../src/lib/env";
 
 // PostgreSQL connection via SSH tunnel
 const pool = new Pool({
-  host: "localhost", // Via SSH tunnel
-  port: 15432,
+  host: env.DB_HOST,
+  port: env.DB_PORT,
   database: "postgres",
   user: "postgres",
-  password: "ubBXH0f38z6WUlcm7K266N8ns0hklduWoTG6gF46meU",
+  password: env.DB_PASSWORD,
 });
 
 const DATA_DIR = path.join(process.cwd(), "../data");

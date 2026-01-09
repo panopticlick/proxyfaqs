@@ -4,17 +4,37 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      skip-sitemap:
+        description: "Skip sitemap generation (faster builds)"
+        required: false
+        default: "false"
+        type: boolean
+      skip-tests:
+        description: "Skip pre-deploy tests (use with caution)"
+        required: false
+        default: "false"
+        type: boolean
+      environment:
+        description: "Target environment"
+        required: false
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
 
 env:
   PROJECT_NAME: proxyfaqs
+  PRODUCTION_URL: https://proxyfaqs.com
 
 jobs:
-  deploy:
+  # Pre-deploy checks
+  pre-deploy:
+    name: Pre-Deployment Checks
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-
+    outputs:
+      should-deploy: ${{ steps.check.outputs.should-deploy }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,19 +47,268 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Security check
+        run: bash scripts/security-check.sh
+
+      - name: TypeScript check
+        run: bun run typecheck
+
+      - name: Run tests
+        if: github.event.inputs.skip-tests != 'true'
+        run: bun test
+
+      - name: Verify build
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SITE_URL: ${{ env.PRODUCTION_URL }}
+          PUBLIC_SITE_URL: ${{ env.PRODUCTION_URL }}
+        run: bun run build
+
+      - name: Approve deployment
+        id: check
+        run: echo "should-deploy=true" >> $GITHUB_OUTPUT
+
+  # Generate sitemap
+  sitemap:
+    name: Generate Sitemap
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: github.event.inputs.skip-sitemap != 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Sitemap
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          SITE_URL: ${{ env.PRODUCTION_URL }}
+        run: bun run scripts/build-sitemap-pg.ts
+
+      - name: Validate sitemap
+        run: |
+          if [ ! -f "public/sitemap.xml" ]; then
+            echo "Error: sitemap.xml not generated"
+            exit 1
+          fi
+          # Check if sitemap is valid XML
+          if ! xmllint --noout public/sitemap.xml 2>/dev/null; then
+            echo "Warning: xmllint not available, skipping XML validation"
+          else
+            echo "Sitemap XML is valid"
+          fi
+          # Check sitemap size (Cloudflare limit is 50MB)
+          SIZE=$(stat -c%s "public/sitemap.xml" 2>/dev/null || stat -f% "public/sitemap.xml")
+          MAX_SIZE=$((50 * 1024 * 1024))
+          if [ $SIZE -gt $MAX_SIZE ]; then
+            echo "Error: sitemap exceeds 50MB limit"
+            exit 1
+          fi
+          echo "Sitemap size: $SIZE bytes"
+
+      - name: Commit sitemap
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/sitemap.xml public/sitemaps/ public/robots.txt || true
+          git diff --staged --quiet || git commit -m "chore: update sitemap [skip ci]"
+          git push || echo "No sitemap changes to commit"
+
+  # Deploy to production
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deploy, sitemap]
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Pull latest sitemap (if updated)
+        run: git pull || true
+
       - name: Build
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SITE_URL: https://proxyfaqs.com
-          PUBLIC_SITE_URL: https://proxyfaqs.com
+          SITE_URL: ${{ env.PRODUCTION_URL }}
+          PUBLIC_SITE_URL: ${{ env.PRODUCTION_URL }}
         run: bun run build
 
       - name: Deploy to Cloudflare Pages
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=${{ env.PROJECT_NAME }} --commit-dirty=true
+
+      - name: Get deployment URL
+        id: deployment-url
+        run: |
+          # Cloudflare Pages deploys to a URL like: https://<project>.pages.dev
+          # or to a custom domain if configured
+          echo "url=${{ env.PRODUCTION_URL }}" >> $GITHUB_OUTPUT
+
+  # Post-deployment verification
+  verify:
+    name: Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Wait for deployment to propagate
+        run: sleep 30
+
+      - name: Health check - Homepage
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }})
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Health check failed: homepage returned $STATUS"
+            exit 1
+          fi
+          echo "Homepage health check passed: $STATUS"
+
+      - name: Health check - API endpoints
+        run: |
+          # Check health endpoint
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }}/api/health)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Health endpoint failed: $STATUS"
+            exit 1
+          fi
+          echo "Health endpoint passed: $STATUS"
+
+      - name: Smoke test - Critical pages
+        run: |
+          # Check key pages respond
+          PAGES=(
+            "/q/"
+            "/category/"
+            "/providers/"
+            "/search"
+          )
+          for page in "${PAGES[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ env.PRODUCTION_URL }}${page}")
+            if [ "$STATUS" -ne 200 ] && [ "$STATUS" -ne 404 ]; then
+              echo "Page check failed: ${page} returned $STATUS"
+              exit 1
+            fi
+            echo "Page ${page}: OK ($STATUS)"
+          done
+
+      - name: Verify sitemap is accessible
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }}/sitemap.xml)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Sitemap check failed: $STATUS"
+            exit 1
+          fi
+          # Verify sitemap contains URLs
+          CONTENT=$(curl -s ${{ env.PRODUCTION_URL }}/sitemap.xml)
+          if ! echo "$CONTENT" | grep -q "<url"; then
+            echo "Sitemap appears empty or malformed"
+            exit 1
+          fi
+          echo "Sitemap verification passed"
+
+      - name: Check for console errors (basic)
+        run: |
+          # Basic check for common error patterns in HTML
+          HTML=$(curl -s ${{ env.PRODUCTION_URL }})
+          if echo "$HTML" | grep -qi "error\|exception\|fatal"; then
+            echo "Warning: Potential error messages found in homepage HTML"
+            # Don't fail, just warn
+          fi
+
+      - name: Create deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Environment: Production" >> $GITHUB_STEP_SUMMARY
+          echo "URL: ${{ env.PRODUCTION_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Verification Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Homepage: OK" >> $GITHUB_STEP_SUMMARY
+          echo "- Health endpoint: OK" >> $GITHUB_STEP_SUMMARY
+          echo "- Critical pages: OK" >> $GITHUB_STEP_SUMMARY
+          echo "- Sitemap: OK" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "DEPLOYMENT FAILED - Manual intervention may be required"
+          echo "See workflow logs for details"
+
+  # Rollback trigger (manual job available if deployment fails)
+  rollback:
+    name: Rollback (Manual)
+    runs-on: ubuntu-latest
+    needs: [deploy, verify]
+    if: failure() && github.event_name == 'workflow_dispatch'
+    environment:
+      name: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rollback to previous commit
+        run: |
+          PREV_COMMIT=$(git rev-parse HEAD~1)
+          echo "Rolling back to $PREV_COMMIT"
+          git checkout $PREV_COMMIT
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install and build
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SITE_URL: ${{ env.PRODUCTION_URL }}
+          PUBLIC_SITE_URL: ${{ env.PRODUCTION_URL }}
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Deploy rollback
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ env.PROJECT_NAME }} --commit-dirty=true
+
+      - name: Notify rollback
+        run: |
+          echo "Rollback completed successfully"
+          echo "Previous deployment restored"

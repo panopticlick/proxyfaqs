@@ -1,8 +1,7 @@
 ---
-import Base from '@/layouts/Base.astro';
-import QuestionCard from '@/components/QuestionCard.astro';
-import { getQuestion, getRelatedQuestions, getAllQuestionSlugs } from '@/lib/supabase';
-import { generateFAQSchema, generateBreadcrumbSchema, generateArticleSchema, formatDate } from '@/lib/utils';
+import Base from '../../layouts/Base.astro';
+import { getQuestion, getRelatedQuestions, getAllQuestionSlugs, type Question } from '../../lib/supabase';
+import { generateFAQSchema, generateBreadcrumbSchema, generateArticleSchema, formatDate } from '../../lib/utils';
 import { marked } from 'marked';
 
 export async function getStaticPaths() {
@@ -10,15 +9,16 @@ export async function getStaticPaths() {
     const slugs = await getAllQuestionSlugs();
     return slugs.map((slug) => ({ params: { slug } }));
   } catch (error) {
-    console.warn('Could not fetch question slugs (database may not be set up yet):', error.message);
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('Could not fetch question slugs (database may not be set up yet):', message);
     return [];
   }
 }
 
 const { slug } = Astro.params;
 
-let question = null;
-let relatedQuestions = [];
+let question: Question | null = null;
+let relatedQuestions: Question[] = [];
 
 try {
   question = await getQuestion(slug);

@@ -2,7 +2,7 @@
  * Chat API Endpoint
  *
  * Proxies chat requests to OpenRouter API (free models) or VectorEngine fallback.
- * Uses google/gemini-2.0-flash-exp:free for quick responses.
+ * Uses google/gemini-2.0-flash-exp:free model for quick responses.
  *
  * IMPORTANT: In production, this should be deployed as a Cloudflare Worker
  * to protect the API key. For local development, we use this endpoint.
@@ -12,23 +12,16 @@ import type { APIRoute } from "astro";
 
 import { env } from "../../lib/env";
 
+export const prerender = false;
+
+// OpenRouter (primary - free models)
+const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = env.OPENROUTER_MODEL;
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
-// Helper to get env vars at runtime (for Cloudflare Pages)
-function getEnvVar(
-  locals: App.Locals,
-  name: string,
-  fallback: string = "",
-): string {
-  // Try Cloudflare runtime env first
-  const runtime = (locals as { runtime?: { env?: Record<string, string> } })
-    .runtime;
-  if (runtime?.env?.[name]) {
-    return runtime.env[name];
-  }
-  // Fall back to build-time env
-  return (env as Record<string, string>)[name] || fallback;
-}
+// VectorEngine (fallback)
+const VECTORENGINE_API_KEY = env.VECTORENGINE_API_KEY;
+const VECTORENGINE_BASE_URL = env.VECTORENGINE_BASE_URL;
 
 const SYSTEM_PROMPT = `You are a proxy expert with 10+ years of experience in web scraping and data extraction. You have personally tested BrightData, Soax, Smartproxy, Proxy-Cheap, and Proxy-Seller.
 
@@ -49,120 +42,7 @@ When answering:
 
 Current page context will be provided to help you give relevant answers.`;
 
-const AFFILIATE_PROVIDERS = {
-  residential: [
-    {
-      name: "BrightData",
-      href: "https://get.brightdata.com/luminati-proxy",
-      reason: "enterprise coverage and geo targeting",
-    },
-    {
-      name: "Soax",
-      href: "https://soax.com/?r=cUgaoF3u",
-      reason: "flexible rotation and residential quality",
-    },
-    {
-      name: "Smartproxy",
-      href: "https://smartproxy.pxf.io/deals",
-      reason: "balanced pricing and coverage",
-    },
-  ],
-  datacenter: [
-    {
-      name: "Proxy-Seller",
-      href: "https://proxy-seller.com/?partner=REVhIGcljl3h0",
-      reason: "fast datacenter IPs with stable uptime",
-    },
-    {
-      name: "Webshare",
-      href: "https://proxy.webshare.io/register/?referral_code=xn5m7d467sbh",
-      reason: "cost-effective datacenter pools",
-    },
-    {
-      name: "Rayobyte",
-      href: "https://billing.rayobyte.com/hosting/aff.php?aff=455&to=http://rayobyte.com/",
-      reason: "reliable datacenter infrastructure",
-    },
-  ],
-  mobile: [
-    {
-      name: "TheSocialProxy",
-      href: "https://thesocialproxy.com/?ref=privateproxyreviews@gmail.com",
-      reason: "mobile IPs for social automation",
-    },
-    {
-      name: "Proxy-Cheap",
-      href: "https://app.proxy-cheap.com/r/mRP1Si",
-      reason: "budget-friendly mobile options",
-    },
-    {
-      name: "Soax",
-      href: "https://soax.com/?r=cUgaoF3u",
-      reason: "flexible mobile rotation control",
-    },
-  ],
-  scraping: [
-    {
-      name: "BrightData",
-      href: "https://get.brightdata.com/luminati-proxy",
-      reason: "strong anti-bot resilience",
-    },
-    {
-      name: "Smartproxy",
-      href: "https://smartproxy.pxf.io/deals",
-      reason: "good coverage and straightforward setup",
-    },
-    {
-      name: "Soax",
-      href: "https://soax.com/?r=cUgaoF3u",
-      reason: "stable pool and flexible session control",
-    },
-  ],
-};
-
-function inferProxyType(text: string) {
-  const normalized = text.toLowerCase();
-  if (
-    normalized.includes("mobile") ||
-    normalized.includes("instagram") ||
-    normalized.includes("tiktok") ||
-    normalized.includes("social")
-  ) {
-    return "mobile";
-  }
-  if (
-    normalized.includes("datacenter") ||
-    normalized.includes("data center") ||
-    normalized.includes("cheap") ||
-    normalized.includes("bulk")
-  ) {
-    return "datacenter";
-  }
-  if (
-    normalized.includes("scraper api") ||
-    normalized.includes("scraping api")
-  ) {
-    return "scraping";
-  }
-  return "residential";
-}
-
-function buildRecommendationContext(message: string, pageContext?: string) {
-  const contextText = `${message} ${pageContext || ""}`;
-  const proxyType = inferProxyType(contextText);
-  const providerList =
-    AFFILIATE_PROVIDERS[proxyType] || AFFILIATE_PROVIDERS.residential;
-
-  const providerLines = providerList
-    .map(
-      (provider) => `- ${provider.name}: ${provider.href} (${provider.reason})`,
-    )
-    .join("\n");
-
-  return `Recommended proxy type: ${proxyType}. When suggesting providers, use these affiliate links and disclose affiliate status:\n${providerLines}`;
-}
-
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
     const { message, sessionId, pageContext } = await request.json();
 
@@ -173,21 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Get env vars at runtime (works on Cloudflare Pages)
-    const OPENROUTER_API_KEY = getEnvVar(locals, "OPENROUTER_API_KEY");
-    const OPENROUTER_MODEL = getEnvVar(
-      locals,
-      "OPENROUTER_MODEL",
-      "google/gemini-2.0-flash-exp:free",
-    );
-    const VECTORENGINE_API_KEY = getEnvVar(locals, "VECTORENGINE_API_KEY");
-    const VECTORENGINE_BASE_URL = getEnvVar(
-      locals,
-      "VECTORENGINE_BASE_URL",
-      "https://api.vectorengine.ai",
-    );
-
-    // Check for available API key (OpenRouter first, VectorEngine fallback)
+    // Check for available API key
     const useOpenRouter = !!OPENROUTER_API_KEY;
     const useVectorEngine = !useOpenRouter && !!VECTORENGINE_API_KEY;
 
@@ -214,11 +80,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    messages.push({
-      role: "system",
-      content: buildRecommendationContext(message, pageContext),
-    });
-
     messages.push({ role: "user", content: message });
 
     // Call API (OpenRouter primary, VectorEngine fallback)
@@ -227,9 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       : `${VECTORENGINE_BASE_URL}/v1/chat/completions`;
 
     const apiKey = useOpenRouter ? OPENROUTER_API_KEY : VECTORENGINE_API_KEY;
-    const model = useOpenRouter
-      ? OPENROUTER_MODEL
-      : "grok-4-fast-non-reasoning";
+    const model = useOpenRouter ? OPENROUTER_MODEL : "grok-4-fast-non-reasoning";
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,

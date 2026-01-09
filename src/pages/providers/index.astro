@@ -1,9 +1,10 @@
 ---
-import Base from '@/layouts/Base.astro';
-import ProviderCard from '@/components/ProviderCard.astro';
-import { getProviders } from '@/lib/supabase';
+import Base from '../../layouts/Base.astro';
+import ProviderCard from '../../components/ProviderCard.astro';
+import { getProviders, type Provider } from '../../lib/supabase';
+import { generateCollectionPageSchema } from '../../lib/utils';
 
-let providers = [];
+let providers: Provider[] = [];
 
 try {
   providers = await getProviders();
@@ -11,32 +12,48 @@ try {
   console.error('Error fetching providers:', error);
 }
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'ItemList',
-  name: 'Top Proxy Providers',
-  description: 'Compare the best proxy providers for web scraping and data extraction',
-  itemListElement: providers.slice(0, 10).map((provider, index) => ({
-    '@type': 'ListItem',
-    position: index + 1,
-    item: {
-      '@type': 'Product',
+const siteUrl = 'https://proxyfaqs.com';
+const pageUrl = `${siteUrl}/providers`;
+
+const jsonLd = [
+  generateCollectionPageSchema({
+    name: 'Compare Proxy Providers - ProxyFAQs',
+    description: 'Compare top proxy providers for web scraping. Find the best residential, datacenter, and mobile proxies with real reviews and pricing data.',
+    url: pageUrl,
+    itemCount: providers.length,
+    items: providers.slice(0, 10).map(provider => ({
       name: provider.name,
-      description: provider.description,
-      url: `https://proxyfaqs.com/providers/${provider.slug}`,
-      aggregateRating: provider.rating ? {
-        '@type': 'AggregateRating',
-        ratingValue: provider.rating,
-        bestRating: 5,
-      } : undefined,
-    },
-  })),
-};
+      url: `${siteUrl}/providers/${provider.slug}`,
+    })),
+  }),
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Top Proxy Providers',
+    description: 'Compare the best proxy providers for web scraping and data extraction',
+    itemListElement: providers.slice(0, 10).map((provider, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: provider.name,
+        description: provider.description,
+        url: `${siteUrl}/providers/${provider.slug}`,
+        aggregateRating: provider.rating ? {
+          '@type': 'AggregateRating',
+          ratingValue: provider.rating,
+          bestRating: 5,
+        } : undefined,
+      },
+    })),
+  },
+];
 ---
 
 <Base
   title="Compare Proxy Providers"
   description="Compare top proxy providers for web scraping. Find the best residential, datacenter, and mobile proxies with real reviews and pricing data."
+  canonicalUrl={pageUrl}
   jsonLd={jsonLd}
 >
   <div class="bg-secondary-50 min-h-screen">

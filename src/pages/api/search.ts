@@ -6,7 +6,9 @@
  */
 
 import type { APIRoute } from "astro";
-import { supabase } from "@/lib/supabase";
+import { searchQuestionsWithFallback } from "../../lib/supabase";
+
+export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
   const query = url.searchParams.get("q") || "";
@@ -20,46 +22,20 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   try {
-    // Use full-text search with trigram fallback
-    const { data: results, error } = await supabase
-      .from("questions")
-      .select("id, slug, question, answer, category, view_count")
-      .textSearch("search_vector", query.split(" ").join(" & "))
-      .limit(limit);
-
-    if (error) {
-      console.error("Search error:", error);
-
-      // Fallback to ILIKE search
-      const { data: fallbackResults, error: fallbackError } = await supabase
-        .from("questions")
-        .select("id, slug, question, answer, category, view_count")
-        .ilike("question", `%${query}%`)
-        .limit(limit);
-
-      if (fallbackError) throw fallbackError;
-
-      return new Response(
-        JSON.stringify({
-          results: fallbackResults || [],
-          query,
-          fallback: true,
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
+    const { results, fallback } = await searchQuestionsWithFallback(query, limit);
 
     return new Response(
       JSON.stringify({
-        results: results || [],
+        results,
         query,
+        fallback,
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
       },
     );
   } catch (error) {

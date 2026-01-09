@@ -1,8 +1,9 @@
 ---
-import Base from '@/layouts/Base.astro';
-import { getCategories } from '@/lib/supabase';
+import Base from '../../layouts/Base.astro';
+import { getCategories, type Category } from '../../lib/supabase';
+import { generateCollectionPageSchema } from '../../lib/utils';
 
-let categories = [];
+let categories: Category[] = [];
 
 try {
   categories = await getCategories();
@@ -11,11 +12,27 @@ try {
 }
 
 const totalQuestions = categories.reduce((sum, cat) => sum + (cat.question_count || 0), 0);
+
+const siteUrl = 'https://proxyfaqs.com';
+const pageUrl = `${siteUrl}/category`;
+
+const jsonLd = generateCollectionPageSchema({
+  name: 'Browse Categories - ProxyFAQs',
+  description: 'Explore proxy and web scraping topics by category. Find answers about residential proxies, datacenter proxies, web scraping techniques, and more.',
+  url: pageUrl,
+  itemCount: categories.length,
+  items: categories.slice(0, 10).map(cat => ({
+    name: cat.name,
+    url: `${siteUrl}/category/${cat.slug}`,
+  })),
+});
 ---
 
 <Base
   title="Browse Categories"
   description="Explore proxy and web scraping topics by category. Find answers about residential proxies, datacenter proxies, web scraping techniques, and more."
+  canonicalUrl={pageUrl}
+  jsonLd={jsonLd}
 >
   <div class="bg-secondary-50 min-h-screen">
     <!-- Header -->
