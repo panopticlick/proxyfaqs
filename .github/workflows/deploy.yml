@@ -23,10 +23,10 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: cd front && bun install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: TypeScript check
-        run: cd front && bun run typecheck
+        run: bun run typecheck
 
       - name: Build
         env:
@@ -36,11 +36,11 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SITE_URL: ${{ env.PRODUCTION_URL }}
           PUBLIC_SITE_URL: ${{ env.PRODUCTION_URL }}
-        run: cd front && bun run build
+        run: bun run build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy front/dist --project-name=${{ env.PROJECT_NAME }} --commit-dirty=true
+          command: pages deploy dist --project-name=${{ env.PROJECT_NAME }} --commit-dirty=true
