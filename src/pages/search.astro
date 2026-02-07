@@ -1,8 +1,11 @@
 ---
+export const prerender = true;
+
 import Base from '../layouts/Base.astro';
 import SearchBox from '../components/SearchBox.astro';
 import QuestionCard from '../components/QuestionCard.astro';
 import { searchQuestions, getPopularQuestions } from '../lib/supabase';
+import { env } from '../lib/env';
 
 const query = Astro.url.searchParams.get('q') || '';
 
@@ -26,12 +29,15 @@ if (query.trim()) {
 }
 
 const title = query ? `Search: ${query}` : 'Search';
+const siteUrl = env.SITE;
+const pageUrl = `${siteUrl}/search`;
 ---
 
 <Base
   title={title}
   description={query ? `Search results for "${query}" - Find answers about proxies and web scraping` : 'Search our knowledge base of proxy and web scraping questions'}
-  noindex={!query}
+  canonicalUrl={pageUrl}
+  noindex={true}
 >
   <div class="bg-secondary-50 min-h-screen">
     <!-- Search Header -->

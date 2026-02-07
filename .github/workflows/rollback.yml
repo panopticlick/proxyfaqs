@@ -1,0 +1,187 @@
+name: Emergency Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_commit:
+        description: "Commit SHA to rollback to (leave empty for previous commit)"
+        required: false
+        type: string
+      reason:
+        description: "Reason for rollback"
+        required: true
+        type: string
+
+env:
+  PROJECT_NAME: proxyfaqs
+  PRODUCTION_URL: https://proxyfaqs.com
+
+permissions:
+  contents: write
+  deployments: write
+  pull-requests: write
+
+jobs:
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine target commit
+        id: target
+        run: |
+          if [ -n "${{ inputs.target_commit }}" ]; then
+            TARGET="${{ inputs.target_commit }}"
+          else
+            TARGET=$(git rev-parse HEAD~1)
+          fi
+          echo "commit=$TARGET" >> $GITHUB_OUTPUT
+          echo "Rolling back to: $TARGET"
+
+      - name: Validate target commit
+        run: |
+          TARGET="${{ steps.target.outputs.commit }}"
+          if ! git cat-file -e $TARGET^{commit} 2>/dev/null; then
+            echo "Error: Invalid commit SHA"
+            exit 1
+          fi
+          echo "Target commit is valid"
+
+      - name: Create rollback branch
+        id: branch
+        run: |
+          BRANCH_NAME="rollback-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $BRANCH_NAME ${{ steps.target.outputs.commit }}
+          echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build rollback version
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SITE_URL: ${{ env.PRODUCTION_URL }}
+          PUBLIC_SITE_URL: ${{ env.PRODUCTION_URL }}
+        run: bun run build
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Error: Build failed, dist directory not created"
+            exit 1
+          fi
+          if [ ! -f "dist/index.html" ]; then
+            echo "Error: Build failed, index.html not found"
+            exit 1
+          fi
+          echo "Build verification passed"
+
+      - name: Deploy rollback to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ env.PROJECT_NAME }} --commit-dirty=true
+
+      - name: Wait for deployment propagation
+        run: sleep 30
+
+      - name: Verify rollback deployment
+        run: |
+          # Check homepage
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }})
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Error: Rollback verification failed, homepage returned $STATUS"
+            exit 1
+          fi
+          echo "Rollback verification passed"
+
+      - name: Create rollback PR
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reason = '${{ inputs.reason }}';
+            const targetCommit = '${{ steps.target.outputs.commit }}';
+            const branchName = '${{ steps.branch.outputs.name }}';
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Rollback: ${targetCommit.substring(0, 7)}`,
+              head: branchName,
+              base: 'main',
+              body: `## Emergency Rollback
+
+              **Reason:** ${reason}
+
+              **Target Commit:** ${targetCommit}
+
+              **Timestamp:** ${new Date().toISOString()}
+
+              This PR tracks the rollback for documentation purposes.
+              `
+            });
+
+            console.log(`Created PR #${pr.number}`);
+            return pr.number;
+
+      - name: Comment on rollback PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.pr.outputs.result }};
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `Rollback completed successfully.
+
+              - Production: ${{ env.PRODUCTION_URL }}
+              - Rolled back to: \`${{ steps.target.outputs.commit }}\`
+              - Reason: ${{ inputs.reason }}
+
+              Next steps:
+              1. Investigate the issue that caused the rollback
+              2. Create a fix in a new branch
+              3. Test thoroughly before deploying`
+            });
+
+      - name: Create rollback summary
+        run: |
+          echo "## Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Commit:** \`${{ steps.target.outputs.commit }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rollback Branch:** \`${{ steps.branch.outputs.name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tracking PR:** #${{ steps.pr.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason:** ${{ inputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify team
+        run: |
+          echo "ROLLBACK NOTIFICATION"
+          echo "===================="
+          echo "Production has been rolled back"
+          echo "Target: ${{ steps.target.outputs.commit }}"
+          echo "Reason: ${{ inputs.reason }}"
+          echo ""
+          echo "Please investigate the root cause before redeploying"

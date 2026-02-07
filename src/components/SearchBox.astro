@@ -1,9 +1,20 @@
 ---
+/**
+ * SearchBox Component
+ *
+ * Production-grade search with:
+ * - Debounced autocomplete suggestions
+ * - Keyboard navigation (arrow keys, enter, escape)
+ * - Accessibility (ARIA labels, roles, live regions)
+ * - Mobile-optimized touch interactions
+ */
+
 export interface Props {
   size?: 'sm' | 'md' | 'lg';
   placeholder?: string;
   autofocus?: boolean;
   initialValue?: string;
+  showPopular?: boolean;
 }
 
 const {
@@ -11,6 +22,7 @@ const {
   placeholder = 'Search proxies, web scraping, and more...',
   autofocus = false,
   initialValue = '',
+  showPopular = true,
 } = Astro.props;
 
 const sizeClasses = {
@@ -24,15 +36,18 @@ const iconSizes = {
   md: 'w-5 h-5',
   lg: 'w-6 h-6',
 };
+
+const popularSearches = ['residential proxy', 'web scraping', 'rotating proxies', 'datacenter proxy'];
 ---
 
-<form action="/search" method="get" class="search-form relative">
+<form action="/search" method="get" class="search-form relative" role="search">
   <div class="relative">
     <svg
-      class:list={['absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400', iconSizes[size]]}
+      class:list={['absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400 pointer-events-none', iconSizes[size]]}
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
+      aria-hidden="true"
     >
       <path
         stroke-linecap="round"
@@ -47,29 +62,57 @@ const iconSizes = {
       value={initialValue}
       placeholder={placeholder}
       class:list={[
-        'w-full bg-white border border-secondary-300 rounded-xl pl-12 pr-4 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all',
+        'w-full bg-white border border-secondary-300 rounded-xl pl-12 pr-24 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:outline-none transition-all',
         sizeClasses[size],
       ]}
       autocomplete="off"
       autofocus={autofocus}
-      aria-label="Search"
+      aria-label="Search questions"
+      aria-describedby="search-help"
+      aria-controls="search-suggestions"
+      aria-expanded="false"
+      aria-autocomplete="list"
+      spellcheck="false"
     />
+    <span id="search-help" class="sr-only">Type to search questions about proxies and web scraping</span>
     <button
       type="submit"
-      class="absolute right-2 top-1/2 -translate-y-1/2 btn-primary !py-2 !px-4"
+      class="absolute right-2 top-1/2 -translate-y-1/2 btn-primary !py-2 !px-4 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
       aria-label="Submit search"
     >
       Search
     </button>
+    <!-- Loading indicator -->
+    <div class="search-loading hidden absolute right-20 top-1/2 -translate-y-1/2">
+      <svg class="animate-spin h-5 w-5 text-primary-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
   </div>
 
   <!-- Search suggestions dropdown -->
-  <div class="search-suggestions hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-secondary-200 z-50 overflow-hidden">
+  <div
+    id="search-suggestions"
+    class="search-suggestions hidden absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-secondary-200 z-50 overflow-hidden"
+    role="listbox"
+    aria-label="Search suggestions"
+  >
     <div class="p-2">
-      <div class="suggestions-list"></div>
-      <div class="px-3 py-2 text-xs text-secondary-500 border-t border-secondary-100 mt-2">
-        Popular: residential proxy, web scraping, rotating proxies
-      </div>
+      <div class="suggestions-list" role="group" aria-label="Matching questions"></div>
+      {showPopular && (
+        <div class="popular-searches px-3 py-2 text-xs text-secondary-500 border-t border-secondary-100 mt-2">
+          <span class="font-medium">Popular:</span>
+          {popularSearches.map((term, i) => (
+            <a
+              href={`/search?q=${encodeURIComponent(term)}`}
+              class="ml-1 text-primary-600 hover:text-primary-700 hover:underline"
+            >
+              {term}{i < popularSearches.length - 1 ? ',' : ''}
+            </a>
+          ))}
+        </div>
+      )}
     </div>
   </div>
 </form>
@@ -81,57 +124,191 @@ const iconSizes = {
     const input = form.querySelector('input[type="search"]') as HTMLInputElement;
     const suggestions = form.querySelector('.search-suggestions') as HTMLDivElement;
     const suggestionsList = form.querySelector('.suggestions-list') as HTMLDivElement;
+    const loadingIndicator = form.querySelector('.search-loading') as HTMLDivElement;
 
-    if (!input || !suggestions) return;
+    if (!input || !suggestions || !suggestionsList) return;
 
     let debounceTimer: ReturnType<typeof setTimeout>;
+    let activeController: AbortController | null = null;
+    let lastQuery = '';
+    let selectedIndex = -1;
+    let currentResults: Array<{ slug: string; question: string }> = [];
 
-    input.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
+    function showLoading() {
+      loadingIndicator?.classList.remove('hidden');
+    }
 
-      debounceTimer = setTimeout(async () => {
-        const query = input.value.trim();
+    function hideLoading() {
+      loadingIndicator?.classList.add('hidden');
+    }
 
-        if (query.length < 2) {
-          suggestions.classList.add('hidden');
+    function showSuggestions() {
+      suggestions.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function hideSuggestions() {
+      suggestions.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+      selectedIndex = -1;
+      updateSelection();
+    }
+
+    function updateSelection() {
+      const items = suggestionsList.querySelectorAll('a');
+      items.forEach((item, i) => {
+        if (i === selectedIndex) {
+          item.classList.add('bg-secondary-100');
+          item.setAttribute('aria-selected', 'true');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('bg-secondary-100');
+          item.setAttribute('aria-selected', 'false');
+        }
+      });
+    }
+
+    function renderResults(results: Array<{ slug: string; question: string }>) {
+      currentResults = results;
+      suggestionsList.innerHTML = '';
+
+      if (results.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'px-3 py-2 text-sm text-secondary-500';
+        noResults.textContent = 'No results found';
+        suggestionsList.appendChild(noResults);
+        return;
+      }
+
+      results.forEach((item, index) => {
+        const link = document.createElement('a');
+        link.href = `/q/${item.slug}`;
+        link.className = 'block px-3 py-2 rounded-lg hover:bg-secondary-50 transition-colors focus:bg-secondary-100 focus:outline-none';
+        link.setAttribute('role', 'option');
+        link.setAttribute('aria-selected', 'false');
+        link.setAttribute('data-index', index.toString());
+
+        const text = document.createElement('span');
+        text.className = 'text-sm text-secondary-900 line-clamp-2';
+        text.textContent = item.question;
+
+        link.appendChild(text);
+        suggestionsList.appendChild(link);
+
+        // Mouse hover selection
+        link.addEventListener('mouseenter', () => {
+          selectedIndex = index;
+          updateSelection();
+        });
+      });
+    }
+
+    async function fetchSuggestions(query: string) {
+      if (query === lastQuery) return;
+      lastQuery = query;
+
+      activeController?.abort();
+      activeController = new AbortController();
+
+      showLoading();
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=6`, {
+          signal: activeController.signal,
+        });
+
+        hideLoading();
+
+        if (!res.ok) {
+          hideSuggestions();
           return;
         }
 
-        try {
-          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=5`);
-          const data = await res.json();
+        const data = await res.json();
 
-          if (data.results && data.results.length > 0) {
-            suggestionsList.innerHTML = data.results
-              .map(
-                (item: { slug: string; question: string }) => `
-              <a href="/q/${item.slug}" class="block px-3 py-2 rounded-lg hover:bg-secondary-50 transition-colors">
-                <span class="text-sm text-secondary-900">${item.question}</span>
-              </a>
-            `
-              )
-              .join('');
-            suggestions.classList.remove('hidden');
-          } else {
-            suggestions.classList.add('hidden');
-          }
-        } catch {
-          suggestions.classList.add('hidden');
+        if (data.results && data.results.length > 0) {
+          renderResults(data.results);
+          showSuggestions();
+        } else {
+          renderResults([]);
+          showSuggestions();
         }
-      }, 200);
+      } catch (e) {
+        hideLoading();
+        if ((e as Error).name !== 'AbortError') {
+          hideSuggestions();
+        }
+      }
+    }
+
+    // Input handler with debounce
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const query = input.value.trim();
+
+      if (query.length < 2) {
+        hideSuggestions();
+        lastQuery = '';
+        return;
+      }
+
+      debounceTimer = setTimeout(() => fetchSuggestions(query), 200);
     });
 
-    // Hide suggestions when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!form.contains(e.target as Node)) {
-        suggestions.classList.add('hidden');
+    // Keyboard navigation
+    input.addEventListener('keydown', (e) => {
+      const items = suggestionsList.querySelectorAll('a');
+      const isOpen = !suggestions.classList.contains('hidden');
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          if (!isOpen && input.value.trim().length >= 2) {
+            fetchSuggestions(input.value.trim());
+          } else if (isOpen) {
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSelection();
+          }
+          break;
+
+        case 'ArrowUp':
+          e.preventDefault();
+          if (isOpen) {
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            updateSelection();
+          }
+          break;
+
+        case 'Enter':
+          if (isOpen && selectedIndex >= 0 && currentResults[selectedIndex]) {
+            e.preventDefault();
+            window.location.href = `/q/${currentResults[selectedIndex].slug}`;
+          }
+          break;
+
+        case 'Escape':
+          hideSuggestions();
+          input.blur();
+          break;
+
+        case 'Tab':
+          hideSuggestions();
+          break;
       }
     });
 
-    // Handle keyboard navigation
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        suggestions.classList.add('hidden');
+    // Focus handler
+    input.addEventListener('focus', () => {
+      const query = input.value.trim();
+      if (query.length >= 2 && currentResults.length > 0) {
+        showSuggestions();
+      }
+    });
+
+    // Click outside to close
+    document.addEventListener('click', (e) => {
+      if (!form.contains(e.target as Node)) {
+        hideSuggestions();
       }
     });
   });

@@ -39,3 +39,28 @@ wrangler.toml
 SECRETS.txt
 deploy-now.sh
 scripts/setup-github.sh
+
+# AI sync / internal docs
+.ai_sync/
+CLAUDE.md
+docs/
+
+# Generated / temporary
+output/
+front/
+functions_legacy/
+data/
+*.generated.json
+article*.json
+proxyfaqs_*.json
+residential-proxy-article.json
+import.py
+
+# Internal project docs (not for repo)
+COMPLETION_SUMMARY.md
+CORRECT_WORKFLOW.md
+DEPLOYMENT_GUIDE.md
+DEPLOYMENT_SUCCESS.md
+KNOWLEDGE_BASE_SUMMARY.md
+QUICKSTART.md
+TEST_STATUS.md

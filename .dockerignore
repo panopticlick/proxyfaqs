@@ -1,0 +1,22 @@
+.git
+.github
+.DS_Store
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+dist
+**/dist
+
+# Large/generated content
+output
+data/*
+!data/proxy_clusters_2025-12-27.csv
+
+# Secrets / local config
+.env
+**/.env
+wrangler.toml
+

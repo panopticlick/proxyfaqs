@@ -1,8 +1,11 @@
 ---
+export const prerender = true;
+
 import Base from '../../layouts/Base.astro';
 import ProviderCard from '../../components/ProviderCard.astro';
 import { getProviders, type Provider } from '../../lib/supabase';
 import { generateCollectionPageSchema } from '../../lib/utils';
+import { env } from '../../lib/env';
 
 let providers: Provider[] = [];
 
@@ -12,7 +15,7 @@ try {
   console.error('Error fetching providers:', error);
 }
 
-const siteUrl = 'https://proxyfaqs.com';
+const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/providers`;
 
 const jsonLd = [

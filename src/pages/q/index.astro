@@ -1,7 +1,10 @@
 ---
+export const prerender = true;
+
 import Base from '../../layouts/Base.astro';
 import QuestionCard from '../../components/QuestionCard.astro';
 import { getPopularQuestions, getCategories } from '../../lib/supabase';
+import { env } from '../../lib/env';
 
 let questions: any[] = [];
 let categories: any[] = [];
@@ -14,21 +17,25 @@ try {
 } catch (error) {
   console.error('Error fetching questions:', error);
 }
+
+const siteUrl = env.SITE;
+const pageUrl = `${siteUrl}/q`;
 ---
 
 <Base
-  title="All Questions"
-  description="Browse all proxy and web scraping questions. Find expert answers about residential proxies, datacenter proxies, scraping techniques, and more."
+  title="Popular Questions"
+  description="Browse popular proxy and web scraping questions. Find expert answers about residential proxies, datacenter proxies, scraping techniques, and more."
+  canonicalUrl={pageUrl}
 >
   <div class="bg-secondary-50 min-h-screen">
     <!-- Header -->
     <section class="bg-white border-b border-secondary-200 py-8">
       <div class="container-custom">
         <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
-          All Questions
+          Popular Questions
         </h1>
         <p class="text-secondary-600">
-          Browse {questions.length.toLocaleString()}+ questions about proxies and web scraping
+          Browse {questions.length.toLocaleString()} popular questions about proxies and web scraping
         </p>
       </div>
     </section>

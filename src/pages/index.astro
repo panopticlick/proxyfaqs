@@ -1,9 +1,23 @@
 ---
+/**
+ * Homepage - ProxyFAQs
+ *
+ * Main landing page with:
+ * - Hero section with search
+ * - Category browsing
+ * - Popular questions
+ * - Provider comparison
+ * - Feature highlights
+ */
+
+export const prerender = true;
+
 import Base from '../layouts/Base.astro';
 import SearchBox from '../components/SearchBox.astro';
 import QuestionCard from '../components/QuestionCard.astro';
 import ProviderCard from '../components/ProviderCard.astro';
 import { getCategories, getPopularQuestions, getProviders, getStats } from '../lib/supabase';
+import { env } from '../lib/env';
 
 // Fetch data at build time
 let categories: any[] = [];
@@ -23,123 +37,176 @@ try {
   console.error('Error fetching homepage data:', error);
 }
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  name: 'ProxyFAQs',
-  url: 'https://proxyfaqs.com',
-  description: 'The Stack Overflow for Proxies - Find answers to 1M+ questions about proxies and web scraping',
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: 'https://proxyfaqs.com/search?q={search_term_string}',
-    'query-input': 'required name=search_term_string',
-  },
+const fallbackStats = {
+  totalQuestions: 2807,
+  totalCategories: 8,
+  totalProviders: 19,
 };
+
+const resolvedStats = {
+  totalQuestions: stats.totalQuestions || fallbackStats.totalQuestions,
+  totalCategories: stats.totalCategories || fallbackStats.totalCategories,
+  totalProviders: stats.totalProviders || fallbackStats.totalProviders,
+};
+
+const questionCountLabel = resolvedStats.totalQuestions.toLocaleString();
+const siteUrl = env.SITE;
+
+// Enhanced JSON-LD for homepage
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'ProxyFAQs',
+    url: siteUrl,
+    description: `The Stack Overflow for Proxies - Find answers to ${questionCountLabel}+ questions about proxies and web scraping`,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${siteUrl}/search?q={search_term_string}`
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'ProxyFAQs',
+    url: siteUrl,
+    logo: `${siteUrl}/favicon.svg`,
+    description: 'Vendor-neutral knowledge base for proxy and web scraping questions',
+    foundingDate: '2024',
+    knowsAbout: ['Proxy Servers', 'Web Scraping', 'Data Extraction', 'Residential Proxies', 'Datacenter Proxies'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'ProxyFAQs - Proxy Knowledge Base',
+    description: `Browse ${questionCountLabel}+ questions about proxies, web scraping, and data extraction`,
+    url: siteUrl,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: resolvedStats.totalQuestions,
+      itemListElement: popularQuestions.slice(0, 5).map((q, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${siteUrl}/q/${q.slug}`,
+        name: q.question,
+      })),
+    },
+  },
+];
 ---
 
 <Base
   title="ProxyFAQs - The Stack Overflow for Proxies"
-  description="Find answers to 1M+ questions about proxies, web scraping, and data extraction. Compare proxy providers with real data and get expert AI assistance."
+  description={`Find answers to ${questionCountLabel}+ questions about proxies, web scraping, and data extraction. Compare proxy providers with real data and get expert AI assistance.`}
   jsonLd={jsonLd}
+  keywords="proxy, proxies, web scraping, residential proxy, datacenter proxy, rotating proxy, proxy provider, scraping tools, anti-detection, proxy comparison"
 >
   <!-- Hero Section -->
-  <section class="relative bg-gradient-to-b from-primary-50 via-white to-white py-16 md:py-24">
+  <section class="relative bg-gradient-to-b from-primary-50 via-white to-white py-16 md:py-24" aria-labelledby="hero-title">
     <div class="container-custom text-center">
       <!-- Badge -->
       <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-medium mb-6">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
           <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
         </svg>
         Vendor-Neutral Knowledge Base
       </div>
 
       <!-- Headline -->
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 leading-tight">
-        The <span class="text-gradient">Stack Overflow</span><br />for Proxies
+      <h1 id="hero-title" class="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 leading-tight">
+        The <span class="text-gradient">Stack Overflow</span><br class="hidden sm:block" />for Proxies
       </h1>
 
       <!-- Subheadline -->
       <p class="text-lg md:text-xl text-secondary-600 max-w-2xl mx-auto mb-8">
         Find answers to your proxy and web scraping questions from our knowledge base of
-        <span class="font-semibold text-secondary-900">{stats.totalQuestions.toLocaleString()}+</span> Q&A pairs.
+        <span class="font-semibold text-secondary-900">{questionCountLabel}+</span> Q&A pairs.
         Compare providers. Get AI-powered help.
       </p>
 
       <!-- Search Box -->
       <div class="max-w-2xl mx-auto mb-8">
-        <SearchBox size="lg" autofocus />
+        <SearchBox size="lg" autofocus showPopular={true} />
       </div>
 
       <!-- Quick Stats -->
-      <div class="flex flex-wrap justify-center gap-8 text-sm text-secondary-600">
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="flex flex-wrap justify-center gap-8 text-sm text-secondary-600" role="list" aria-label="Site statistics">
+        <div class="flex items-center gap-2" role="listitem">
+          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span><strong class="text-secondary-900">{stats.totalQuestions.toLocaleString()}</strong> Questions</span>
+          <span><strong class="text-secondary-900">{resolvedStats.totalQuestions.toLocaleString()}</strong> Questions</span>
         </div>
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2" role="listitem">
+          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
-          <span><strong class="text-secondary-900">{stats.totalCategories}</strong> Categories</span>
+          <span><strong class="text-secondary-900">{resolvedStats.totalCategories}</strong> Categories</span>
         </div>
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2" role="listitem">
+          <svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span><strong class="text-secondary-900">{stats.totalProviders}</strong> Providers</span>
+          <span><strong class="text-secondary-900">{resolvedStats.totalProviders}</strong> Providers</span>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Categories Section -->
-  <section class="py-16 bg-white">
+  <section class="py-16 bg-white" aria-labelledby="categories-title">
     <div class="container-custom">
       <div class="flex justify-between items-center mb-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900">Browse Categories</h2>
+        <h2 id="categories-title" class="text-2xl md:text-3xl font-bold text-secondary-900">Browse Categories</h2>
         <a href="/category" class="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
           View all
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </a>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {categories.slice(0, 8).map((category) => (
-          <a
-            href={`/category/${category.slug}`}
-            class="card-hover flex items-center gap-4 group"
-          >
-            <div class="w-12 h-12 rounded-lg bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
-              <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="font-medium text-secondary-900 group-hover:text-primary-600 transition-colors">
-                {category.name}
-              </h3>
-              <p class="text-sm text-secondary-500">
-                {category.question_count?.toLocaleString() || 0} questions
-              </p>
-            </div>
-          </a>
-        ))}
-      </div>
+      <nav aria-label="Question categories">
+        <ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {categories.slice(0, 8).map((category) => (
+            <li>
+              <a
+                href={`/category/${category.slug}`}
+                class="card-hover flex items-center gap-4 group"
+              >
+                <div class="w-12 h-12 rounded-lg bg-primary-50 flex items-center justify-center group-hover:bg-primary-100 transition-colors" aria-hidden="true">
+                  <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-medium text-secondary-900 group-hover:text-primary-600 transition-colors">
+                    {category.name}
+                  </h3>
+                  <p class="text-sm text-secondary-500">
+                    {category.question_count?.toLocaleString() || 0} questions
+                  </p>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   </section>
 
   <!-- Popular Questions Section -->
-  <section class="py-16 bg-secondary-50">
+  <section class="py-16 bg-secondary-50" aria-labelledby="popular-title">
     <div class="container-custom">
       <div class="flex justify-between items-center mb-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900">Popular Questions</h2>
+        <h2 id="popular-title" class="text-2xl md:text-3xl font-bold text-secondary-900">Popular Questions</h2>
         <a href="/q" class="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
           View all
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </a>
@@ -154,10 +221,10 @@ const jsonLd = {
   </section>
 
   <!-- Provider Comparison Section -->
-  <section class="py-16 bg-white">
+  <section class="py-16 bg-white" aria-labelledby="providers-title">
     <div class="container-custom">
       <div class="text-center mb-12">
-        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
+        <h2 id="providers-title" class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
           Compare Top Proxy Providers
         </h2>
         <p class="text-secondary-600 max-w-2xl mx-auto">
@@ -172,9 +239,9 @@ const jsonLd = {
       </div>
 
       <div class="text-center mt-8">
-        <a href="/providers" class="btn-primary">
+        <a href="/providers" class="btn-primary inline-flex items-center">
           View All Providers
-          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
         </a>
@@ -183,10 +250,10 @@ const jsonLd = {
   </section>
 
   <!-- Features Section -->
-  <section class="py-16 bg-gradient-to-b from-primary-50 to-white">
+  <section class="py-16 bg-gradient-to-b from-primary-50 to-white" aria-labelledby="features-title">
     <div class="container-custom">
       <div class="text-center mb-12">
-        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
+        <h2 id="features-title" class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
           Why ProxyFAQs?
         </h2>
         <p class="text-secondary-600">
@@ -195,8 +262,8 @@ const jsonLd = {
       </div>
 
       <div class="grid gap-8 md:grid-cols-3">
-        <div class="text-center">
-          <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4">
+        <article class="text-center">
+          <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4" aria-hidden="true">
             <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
@@ -205,10 +272,10 @@ const jsonLd = {
           <p class="text-secondary-600">
             No bias. We compare all providers fairly based on real performance data.
           </p>
-        </div>
+        </article>
 
-        <div class="text-center">
-          <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4">
+        <article class="text-center">
+          <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4" aria-hidden="true">
             <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
@@ -217,19 +284,19 @@ const jsonLd = {
           <p class="text-secondary-600">
             Get instant answers from our AI assistant trained on 10+ years of proxy expertise.
           </p>
-        </div>
+        </article>
 
-        <div class="text-center">
-          <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4">
+        <article class="text-center">
+          <div class="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mx-auto mb-4" aria-hidden="true">
             <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
           <h3 class="text-xl font-semibold text-secondary-900 mb-2">Comprehensive Q&A</h3>
           <p class="text-secondary-600">
-            Access our database of 1M+ questions answered by proxy experts.
+            Access our database of {questionCountLabel}+ questions answered by proxy experts.
           </p>
-        </div>
+        </article>
       </div>
     </div>
   </section>

@@ -1,0 +1,134 @@
+# ProxyFAQs Production Docker Compose
+# Server: 107.174.42.198
+# Last updated: 2026-02-07
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - SITE_URL=${SITE_URL:-https://proxyfaqs.com}
+        - BUILD_CHUNK_SIZE=${BUILD_CHUNK_SIZE:-5000}
+        - BUILD_PARALLEL=${BUILD_PARALLEL:-true}
+    container_name: proxyfaqs-app
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PUBLIC_SUPABASE_URL=${PUBLIC_SUPABASE_URL:-http://supabase-kong:8000}
+      - PUBLIC_SUPABASE_ANON_KEY=${PUBLIC_SUPABASE_ANON_KEY}
+      - VECTORENGINE_API_KEY=${VECTORENGINE_API_KEY}
+      - VECTORENGINE_BASE_URL=${VECTORENGINE_BASE_URL:-https://api.vectorengine.ai}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_API_KEYS=${OPENROUTER_API_KEYS}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.3-70b-instruct:free}
+      - DB_HOST=pgbouncer
+      - DB_PORT=6432
+      - DB_USER=postgres
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=postgres
+      - DB_SCHEMA=proxyfaqs
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
+      - RATE_LIMIT_CHAT_REQUESTS=${RATE_LIMIT_CHAT_REQUESTS:-20}
+      - RATE_LIMIT_SEARCH_REQUESTS=${RATE_LIMIT_SEARCH_REQUESTS:-60}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://proxyfaqs.com,https://www.proxyfaqs.com}
+    networks:
+      - internal
+      - supabase_default
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service,environment"
+    labels:
+      - "service=proxyfaqs"
+      - "environment=production"
+      - "traefik.enable=false"
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:size=100M,mode=1777
+
+  # PgBouncer connection pooler for efficient database connections
+  pgbouncer:
+    image: pghero/pgbouncer:1.22.1
+    container_name: proxyfaqs-pgbouncer
+    environment:
+      - DATABASES_HOST=supabase-db
+      - DATABASES_PORT=5432
+      - DATABASES_DATABASE=postgres
+      - DATABASES_USER=postgres
+      - DATABASES_PASSWORD=${POSTGRES_PASSWORD}
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=1000
+      - DEFAULT_POOL_SIZE=50
+      - MIN_POOL_SIZE=10
+      - RESERVE_POOL_SIZE=10
+      - RESERVE_POOL_TIMEOUT=3
+      - SERVER_LIFETIME=3600
+      - SERVER_IDLE_TIMEOUT=600
+      - QUERY_TIMEOUT=30
+      - SERVER_CONNECT_TIMEOUT=15
+      - SERVER_LOGIN_RETRY=2
+      - IGNORE_STARTUP_PARAMETERS=extra_float_digits
+      - LOG_CONNECTIONS=0
+      - LOG_DISCONNECTIONS=0
+      - LOG_POOLER_ERRORS=1
+    networks:
+      - internal
+      - supabase_default
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "service=proxyfaqs-pgbouncer"
+      - "environment=production"
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  internal:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+  supabase_default:
+    external: true

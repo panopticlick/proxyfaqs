@@ -11,9 +11,43 @@
 
 import { env } from "./env";
 
-// Database configuration
-const supabaseUrl = env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = env.PUBLIC_SUPABASE_ANON_KEY;
+type RuntimeEnv = Record<string, unknown>;
+
+function getSupabaseConfig(runtimeEnv?: RuntimeEnv): {
+  url: string;
+  anonKey: string;
+  timeoutMs: number;
+} {
+  const rawUrl =
+    (typeof runtimeEnv?.PUBLIC_SUPABASE_URL === "string" &&
+      runtimeEnv.PUBLIC_SUPABASE_URL) ||
+    (typeof runtimeEnv?.SUPABASE_URL === "string" && runtimeEnv.SUPABASE_URL) ||
+    env.PUBLIC_SUPABASE_URL;
+
+  const rawAnonKey =
+    (typeof runtimeEnv?.PUBLIC_SUPABASE_ANON_KEY === "string" &&
+      runtimeEnv.PUBLIC_SUPABASE_ANON_KEY) ||
+    (typeof runtimeEnv?.SUPABASE_ANON_KEY === "string" &&
+      runtimeEnv.SUPABASE_ANON_KEY) ||
+    env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const rawTimeoutMs =
+    (typeof runtimeEnv?.SUPABASE_TIMEOUT_MS === "string" ||
+    typeof runtimeEnv?.SUPABASE_TIMEOUT_MS === "number")
+      ? Number(runtimeEnv.SUPABASE_TIMEOUT_MS)
+      : env.SUPABASE_TIMEOUT_MS;
+
+  const timeoutMs =
+    Number.isFinite(rawTimeoutMs) && rawTimeoutMs > 0
+      ? rawTimeoutMs
+      : env.SUPABASE_TIMEOUT_MS;
+
+  return {
+    url: rawUrl,
+    anonKey: rawAnonKey,
+    timeoutMs,
+  };
+}
 
 // Type definitions for database tables
 export interface Category {
@@ -102,12 +136,30 @@ async function supabaseRest<T>(
     count?: boolean;
     head?: boolean;
   } = {},
+  runtimeEnv?: RuntimeEnv,
 ): Promise<{
   data: T[] | null;
   error: { message: string; code?: string } | null;
   count?: number;
 }> {
   try {
+    const { url: supabaseUrl, anonKey: supabaseAnonKey, timeoutMs: supabaseTimeoutMs } =
+      getSupabaseConfig(runtimeEnv);
+
+    if (!supabaseUrl) {
+      return {
+        data: null,
+        error: { message: "Supabase URL not configured" },
+      };
+    }
+
+    if (!supabaseAnonKey) {
+      return {
+        data: null,
+        error: { message: "Supabase anon key not configured" },
+      };
+    }
+
     const url = new URL(`${supabaseUrl}/rest/v1/${table}`);
 
     // Select columns
@@ -186,10 +238,19 @@ async function supabaseRest<T>(
       headers["Prefer"] = "count=exact";
     }
 
-    const response = await fetch(url.toString(), {
-      headers,
-      method: options.head ? "HEAD" : "GET",
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), supabaseTimeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), {
+        headers,
+        method: options.head ? "HEAD" : "GET",
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorData = await response
@@ -223,7 +284,11 @@ async function supabaseRest<T>(
     return { data, error: null, count };
   } catch (error) {
     const err = error as Error;
-    return { data: null, error: { message: err.message } };
+    const message =
+      err.name === "AbortError"
+        ? "Supabase request timed out"
+        : err.message;
+    return { data: null, error: { message } };
   }
 }
 
@@ -242,21 +307,27 @@ function normalizeSearchQuery(input: string): string {
 
 // Query helpers - using direct REST API calls
 export async function getCategories(): Promise<Category[]> {
-  const result = await supabaseRest<Category>("categories", {
+  const result = await supabaseRest<Category>(
+    "categories",
+    {
     select: "*",
     order: { column: "question_count", ascending: false },
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return result.data || [];
 }
 
 export async function getCategory(slug: string): Promise<Category | null> {
-  const result = await supabaseRest<Category>("categories", {
+  const result = await supabaseRest<Category>(
+    "categories",
+    {
     select: "*",
     eq: { slug },
     limit: 1,
-  });
+    },
+  );
 
   if (result.error && result.error.code !== "PGRST116") throw result.error;
   return result.data?.[0] || null;
@@ -267,24 +338,34 @@ export async function getQuestionsByCategory(
   limit = 50,
   offset = 0,
 ): Promise<Question[]> {
-  const result = await supabaseRest<Question>("questions", {
+  const result = await supabaseRest<Question>(
+    "questions",
+    {
     select: "*",
     eq: { category_slug: categorySlug },
     order: { column: "view_count", ascending: false },
     limit,
     offset,
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return result.data || [];
 }
 
-export async function getQuestion(slug: string): Promise<Question | null> {
-  const result = await supabaseRest<Question>("questions", {
+export async function getQuestion(
+  slug: string,
+  runtimeEnv?: RuntimeEnv,
+): Promise<Question | null> {
+  const result = await supabaseRest<Question>(
+    "questions",
+    {
     select: "*",
     eq: { slug },
     limit: 1,
-  });
+    },
+    runtimeEnv,
+  );
 
   if (result.error && result.error.code !== "PGRST116") throw result.error;
   return result.data?.[0] || null;
@@ -300,6 +381,7 @@ export async function getQuestion(slug: string): Promise<Question | null> {
 export async function getRelatedQuestions(
   question: Question,
   limit = 5,
+  runtimeEnv?: RuntimeEnv,
 ): Promise<Question[]> {
   // Extract meaningful keywords from the question (remove stop words)
   const stopWords = new Set([
@@ -327,7 +409,7 @@ export async function getRelatedQuestions(
       neq: { id: question.id },
       textSearch: { column: "search_vector", query: searchQuery, type: "plain" },
       limit: limit + 5, // Get extra to filter
-    });
+    }, runtimeEnv);
 
     if (!result.error && result.data && result.data.length > 0) {
       // Prefer questions from same category, then by view count
@@ -348,7 +430,7 @@ export async function getRelatedQuestions(
     neq: { id: question.id },
     order: { column: "view_count", ascending: false },
     limit,
-  });
+  }, runtimeEnv);
 
   if (fallback.error) throw fallback.error;
   return fallback.data || [];
@@ -357,15 +439,20 @@ export async function getRelatedQuestions(
 export async function searchQuestions(
   query: string,
   limit = 20,
+  runtimeEnv?: RuntimeEnv,
 ): Promise<Question[]> {
   const normalized = normalizeSearchQuery(query);
   if (!normalized) return [];
 
-  const result = await supabaseRest<Question>("questions", {
+  const result = await supabaseRest<Question>(
+    "questions",
+    {
     select: "*",
     textSearch: { column: "search_vector", query: normalized, type: "plain" },
     limit,
-  });
+    },
+    runtimeEnv,
+  );
 
   if (result.error) throw result.error;
   return result.data || [];
@@ -374,57 +461,75 @@ export async function searchQuestions(
 export async function searchQuestionsWithFallback(
   query: string,
   limit = 20,
+  runtimeEnv?: RuntimeEnv,
 ): Promise<{ results: Question[]; fallback: boolean }> {
   const normalized = normalizeSearchQuery(query);
   if (!normalized) return { results: [], fallback: false };
 
-  const primary = await supabaseRest<Question>("questions", {
+  const primary = await supabaseRest<Question>(
+    "questions",
+    {
     select: "id, slug, question, answer, category, view_count",
     textSearch: { column: "search_vector", query: normalized, type: "plain" },
     limit,
-  });
+    },
+    runtimeEnv,
+  );
 
   if (!primary.error) {
     return { results: primary.data || [], fallback: false };
   }
 
-  const fallback = await supabaseRest<Question>("questions", {
+  const fallback = await supabaseRest<Question>(
+    "questions",
+    {
     select: "id, slug, question, answer, category, view_count",
     ilike: { question: `%${normalized}%` },
     limit,
-  });
+    },
+    runtimeEnv,
+  );
 
   if (fallback.error) throw fallback.error;
   return { results: fallback.data || [], fallback: true };
 }
 
 export async function getProviders(): Promise<Provider[]> {
-  const result = await supabaseRest<Provider>("providers", {
+  const result = await supabaseRest<Provider>(
+    "providers",
+    {
     select: "*",
     order: { column: "rank", ascending: true },
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return result.data || [];
 }
 
 export async function getProvider(slug: string): Promise<Provider | null> {
-  const result = await supabaseRest<Provider>("providers", {
+  const result = await supabaseRest<Provider>(
+    "providers",
+    {
     select: "*",
     eq: { slug },
     limit: 1,
-  });
+    },
+  );
 
   if (result.error && result.error.code !== "PGRST116") throw result.error;
   return result.data?.[0] || null;
 }
 
 export async function getPopularQuestions(limit = 10): Promise<Question[]> {
-  const result = await supabaseRest<Question>("questions", {
+  const result = await supabaseRest<Question>(
+    "questions",
+    {
     select: "*",
     order: { column: "view_count", ascending: false },
     limit,
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return result.data || [];
@@ -437,27 +542,36 @@ export async function incrementViewCount(_questionId: string): Promise<void> {
 
 // For static site generation - get all slugs
 export async function getAllQuestionSlugs(): Promise<string[]> {
-  const result = await supabaseRest<{ slug: string }>("questions", {
+  const result = await supabaseRest<{ slug: string }>(
+    "questions",
+    {
     select: "slug",
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return (result.data || []).map((q) => q.slug);
 }
 
 export async function getAllCategorySlugs(): Promise<string[]> {
-  const result = await supabaseRest<{ slug: string }>("categories", {
+  const result = await supabaseRest<{ slug: string }>(
+    "categories",
+    {
     select: "slug",
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return (result.data || []).map((c) => c.slug);
 }
 
 export async function getAllProviderSlugs(): Promise<string[]> {
-  const result = await supabaseRest<{ slug: string }>("providers", {
+  const result = await supabaseRest<{ slug: string }>(
+    "providers",
+    {
     select: "slug",
-  });
+    },
+  );
 
   if (result.error) throw result.error;
   return (result.data || [])

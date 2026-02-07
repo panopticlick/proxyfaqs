@@ -1,4 +1,14 @@
 ---
+/**
+ * Base Layout Component
+ *
+ * Production-grade layout with comprehensive SEO optimization:
+ * - Meta tags (Open Graph, Twitter Cards)
+ * - JSON-LD structured data
+ * - Performance optimizations (preconnect, preload)
+ * - Accessibility features
+ */
+
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -14,17 +24,27 @@ export interface Props {
   jsonLd?: object | object[];
   prevUrl?: string;
   nextUrl?: string;
+  ogType?: string;
+  keywords?: string;
+  author?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
 }
 
 const {
   title,
-  description = 'ProxyFAQs - The Stack Overflow for Proxies. Find answers to 1M+ questions about proxies, web scraping, and data extraction. Compare providers with real data.',
+  description = 'ProxyFAQs - The Stack Overflow for Proxies. Find answers to thousands of questions about proxies, web scraping, and data extraction. Compare providers with real data.',
   ogImage = '/og-image.png',
   canonicalUrl,
   noindex = false,
   jsonLd,
   prevUrl,
   nextUrl,
+  ogType = 'website',
+  keywords = 'proxy, proxies, web scraping, residential proxy, datacenter proxy, rotating proxy, proxy provider, scraping tools',
+  author = 'ProxyFAQs',
+  publishedTime,
+  modifiedTime,
 } = Astro.props;
 
 const siteUrl = env.SITE;
@@ -32,20 +52,32 @@ const currentUrl = canonicalUrl || new URL(Astro.url.pathname, siteUrl).href;
 const fullOgImage = ogImage.startsWith('http') ? ogImage : new URL(ogImage, siteUrl).href;
 
 const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
+const truncatedDescription = description.length > 160 ? description.slice(0, 157) + '...' : description;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <!-- Primary Meta Tags -->
     <title>{fullTitle}</title>
     <meta name="title" content={fullTitle} />
-    <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="description" content={truncatedDescription} />
+    <meta name="keywords" content={keywords} />
+    <meta name="author" content={author} />
+    <meta name="theme-color" content="#0284c7" />
+    <meta name="color-scheme" content="light" />
+
+    <!-- Robots -->
+    {noindex ? (
+      <meta name="robots" content="noindex, nofollow" />
+    ) : (
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    )}
 
     <!-- Canonical URL -->
     <link rel="canonical" href={currentUrl} />
@@ -56,26 +88,39 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:url" content={currentUrl} />
     <meta property="og:title" content={fullTitle} />
-    <meta property="og:description" content={description} />
+    <meta property="og:description" content={truncatedDescription} />
     <meta property="og:image" content={fullOgImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={fullTitle} />
     <meta property="og:site_name" content="ProxyFAQs" />
+    <meta property="og:locale" content="en_US" />
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
 
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content={currentUrl} />
-    <meta property="twitter:title" content={fullTitle} />
-    <meta property="twitter:description" content={description} />
-    <meta property="twitter:image" content={fullOgImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={currentUrl} />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={truncatedDescription} />
+    <meta name="twitter:image" content={fullOgImage} />
+    <meta name="twitter:image:alt" content={fullTitle} />
 
-    <!-- Fonts -->
+    <!-- Performance: Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://openrouter.ai" />
+
+    <!-- Fonts with display=swap for better performance -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
@@ -93,16 +138,45 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
         "@type": "Organization",
         "name": "ProxyFAQs",
         "url": "https://proxyfaqs.com",
-        "logo": "https://proxyfaqs.com/favicon.svg",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://proxyfaqs.com/favicon.svg",
+          "width": 512,
+          "height": 512
+        },
         "description": "The Stack Overflow for Proxies - Vendor-neutral knowledge base for proxy and web scraping questions",
+        "foundingDate": "2024",
         "sameAs": []
       }
     </script>
+
+    <!-- WebSite Schema for Sitelinks Search Box -->
+    <script is:inline type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "ProxyFAQs",
+        "url": "https://proxyfaqs.com",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://proxyfaqs.com/search?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
   </head>
-  <body class="min-h-screen flex flex-col">
+  <body class="min-h-screen flex flex-col bg-white text-secondary-900 antialiased">
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">
+      Skip to main content
+    </a>
+
     <Header />
 
-    <main class="flex-1">
+    <main id="main-content" class="flex-1">
       <slot />
     </main>
 
@@ -111,17 +185,20 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
     <ChatWidget />
 
     <!-- Cookie Consent Banner -->
-    <div id="cookie-consent" class="fixed bottom-0 left-0 right-0 bg-secondary-900 text-white p-4 z-50 hidden">
+    <div id="cookie-consent" class="fixed bottom-0 left-0 right-0 bg-secondary-900 text-white p-4 z-50 hidden transform translate-y-full transition-transform duration-300" role="dialog" aria-labelledby="cookie-title" aria-describedby="cookie-description">
       <div class="container-custom flex flex-col md:flex-row items-center justify-between gap-4">
-        <p class="text-sm text-secondary-300">
-          We use cookies to improve your experience and analyze site usage.
-          <a href="/privacy" class="text-primary-400 hover:underline">Learn more</a>
-        </p>
-        <div class="flex gap-3">
-          <button id="reject-cookies" class="px-4 py-2 text-sm bg-secondary-700 hover:bg-secondary-600 rounded-lg transition-colors">
+        <div>
+          <h2 id="cookie-title" class="sr-only">Cookie Consent</h2>
+          <p id="cookie-description" class="text-sm text-secondary-300">
+            We use cookies to improve your experience and analyze site usage.
+            <a href="/privacy" class="text-primary-400 hover:underline">Learn more</a>
+          </p>
+        </div>
+        <div class="flex gap-3 flex-shrink-0">
+          <button id="reject-cookies" class="px-4 py-2 text-sm bg-secondary-700 hover:bg-secondary-600 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
             Reject Non-Essential
           </button>
-          <button id="accept-cookies" class="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+          <button id="accept-cookies" class="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
             Accept All
           </button>
         </div>
@@ -135,16 +212,29 @@ const fullTitle = title.includes('ProxyFAQs') ? title : `${title} | ProxyFAQs`;
 
         if (!consent && banner) {
           banner.classList.remove('hidden');
+          // Trigger animation after a brief delay
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              banner.classList.remove('translate-y-full');
+            });
+          });
+        }
+
+        function hideBanner() {
+          if (banner) {
+            banner.classList.add('translate-y-full');
+            setTimeout(() => banner.classList.add('hidden'), 300);
+          }
         }
 
         document.getElementById('accept-cookies')?.addEventListener('click', function() {
           localStorage.setItem('cookie-consent', 'accepted');
-          banner?.classList.add('hidden');
+          hideBanner();
         });
 
         document.getElementById('reject-cookies')?.addEventListener('click', function() {
           localStorage.setItem('cookie-consent', 'rejected');
-          banner?.classList.add('hidden');
+          hideBanner();
         });
       })();
     </script>

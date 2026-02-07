@@ -1,7 +1,10 @@
 ---
+export const prerender = true;
+
 import Base from '../../layouts/Base.astro';
 import { getProvider, getAllProviderSlugs, getProviders, type Provider } from '../../lib/supabase';
 import { generateBreadcrumbSchema, generateProductSchema } from '../../lib/utils';
+import { env } from '../../lib/env';
 
 export async function getStaticPaths() {
   try {
@@ -33,7 +36,7 @@ if (!provider) {
   return Astro.redirect('/404');
 }
 
-const siteUrl = 'https://proxyfaqs.com';
+const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/providers/${slug}`;
 
 const stars = provider.rating ? Math.round(provider.rating) : 0;
@@ -77,6 +80,16 @@ const jsonLd = [
     reviewBody: provider.description ?? '',
   },
 ];
+
+const websiteHostname = provider.website_url
+  ? (() => {
+      try {
+        return new URL(provider.website_url).hostname;
+      } catch {
+        return provider.website_url.replace(/^https?:\/\//, "");
+      }
+    })()
+  : null;
 ---
 
 <Base
@@ -84,7 +97,7 @@ const jsonLd = [
   description={provider.description || `Read our in-depth review of ${provider.name}. Compare features, pricing, pros and cons.`}
   canonicalUrl={pageUrl}
   jsonLd={jsonLd}
-  noindex={true}
+  ogType="product"
 >
   <article class="py-8 md:py-12">
     <div class="container-custom">
@@ -122,6 +135,9 @@ const jsonLd = [
                     src={provider.logo_url}
                     alt={`${provider.name} logo`}
                     class="w-24 h-24 rounded-xl object-contain bg-white border border-secondary-200 p-2"
+                    width="96"
+                    height="96"
+                    decoding="async"
                   />
                 ) : (
                   <div class="w-24 h-24 rounded-xl bg-primary-100 flex items-center justify-center">
@@ -284,12 +300,12 @@ const jsonLd = [
             <div class="card">
               <h2 class="font-semibold text-secondary-900 mb-4">Quick Info</h2>
               <dl class="space-y-3 text-sm">
-                {provider.website_url && (
+                {provider.website_url && websiteHostname && (
                   <div class="flex justify-between">
                     <dt class="text-secondary-500">Website</dt>
                     <dd>
                       <a href={provider.website_url} target="_blank" rel="noopener" class="text-primary-600 hover:underline">
-                        {new URL(provider.website_url).hostname}
+                        {websiteHostname}
                       </a>
                     </dd>
                   </div>
@@ -315,7 +331,15 @@ const jsonLd = [
                     class="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary-50 transition-colors"
                   >
                     {other.logo_url ? (
-                      <img src={other.logo_url} alt={other.name} class="w-8 h-8 rounded object-contain" />
+                      <img
+                        src={other.logo_url}
+                        alt={other.name}
+                        class="w-8 h-8 rounded object-contain"
+                        width="32"
+                        height="32"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <div class="w-8 h-8 rounded bg-primary-100 flex items-center justify-center">
                         <span class="text-primary-600 font-bold text-sm">{other.name.charAt(0)}</span>

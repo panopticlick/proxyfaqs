@@ -1,0 +1,38 @@
+---
+/**
+ * PaginationMeta - SEO pagination meta tags component
+ * Adds rel="prev", rel="next", and canonical URLs for paginated pages
+ */
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  baseUrl: string;
+}
+
+const { currentPage, totalPages, baseUrl } = Astro.props;
+
+// Remove trailing slash and any existing pagination
+const cleanUrl = baseUrl.replace(/\/page\/\d+$/, '').replace(/\/$/, '');
+
+// Build pagination URLs
+const canonicalUrl = currentPage === 1
+  ? cleanUrl
+  : `${cleanUrl}/page/${currentPage}`;
+
+const prevUrl = currentPage > 1
+  ? currentPage === 2
+    ? cleanUrl
+    : `${cleanUrl}/page/${currentPage - 1}`
+  : null;
+
+const nextUrl = currentPage < totalPages
+  ? `${cleanUrl}/page/${currentPage + 1}`
+  : null;
+---
+
+<!-- Canonical URL -->
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Pagination links -->
+{prevUrl && <link rel="prev" href={prevUrl} />}
+{nextUrl && <link rel="next" href={nextUrl} />}

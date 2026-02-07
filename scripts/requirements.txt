@@ -1,0 +1,13 @@
+# Python dependencies for ProxyFAQs data processing scripts
+# Install with: pip install -r requirements.txt
+
+# Required for all scripts
+pandas>=1.3.0
+
+# Required for content generation
+openai>=1.0.0          # VectorEngine API client
+scikit-learn>=1.0.0    # TF-IDF vectorization and duplicate detection
+tqdm>=4.60.0           # Progress bars
+
+# Required for content validation
+markdown>=3.4.0        # Markdown to HTML conversion

@@ -1,8 +1,11 @@
 ---
+export const prerender = true;
+
 import Base from '../../layouts/Base.astro';
 import QuestionCard from '../../components/QuestionCard.astro';
 import { getCategory, getQuestionsByCategory, getAllCategorySlugs, getCategories, type Category, type Question } from '../../lib/supabase';
 import { generateBreadcrumbSchema, generateCollectionPageSchema } from '../../lib/utils';
+import { env } from '../../lib/env';
 
 export async function getStaticPaths() {
   try {
@@ -36,7 +39,7 @@ if (!category) {
   return Astro.redirect('/404');
 }
 
-const siteUrl = 'https://proxyfaqs.com';
+const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/category/${slug}`;
 
 const jsonLd = [

@@ -1,7 +1,10 @@
 ---
+export const prerender = true;
+
 import Base from '../../layouts/Base.astro';
 import { getCategories, type Category } from '../../lib/supabase';
 import { generateCollectionPageSchema } from '../../lib/utils';
+import { env } from '../../lib/env';
 
 let categories: Category[] = [];
 
@@ -13,7 +16,7 @@ try {
 
 const totalQuestions = categories.reduce((sum, cat) => sum + (cat.question_count || 0), 0);
 
-const siteUrl = 'https://proxyfaqs.com';
+const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/category`;
 
 const jsonLd = generateCollectionPageSchema({

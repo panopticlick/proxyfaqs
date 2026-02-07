@@ -1,0 +1,160 @@
+---
+/**
+ * Pagination - UI component for page navigation
+ */
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  baseUrl: string;
+  maxVisible?: number;
+}
+
+const { currentPage, totalPages, baseUrl, maxVisible = 7 } = Astro.props;
+
+// Remove trailing slash and any existing pagination
+const cleanUrl = baseUrl.replace(/\/page\/\d+$/, '').replace(/\/$/, '');
+
+function getPageUrl(page: number): string {
+  return page === 1 ? cleanUrl : `${cleanUrl}/page/${page}`;
+}
+
+// Generate page numbers to show
+function generatePageNumbers(current: number, total: number, max: number): Array<number | null> {
+  const pages: Array<number | null> = [];
+  const sideCount = Math.floor((max - 3) / 2); // -3 for first, last, and current
+
+  pages.push(1);
+
+  if (total <= max) {
+    for (let i = 2; i <= total - 1; i++) {
+      pages.push(i);
+    }
+  } else {
+    // Pages before current
+    const startBefore = Math.max(2, current - sideCount);
+    for (let i = 2; i < startBefore; i++) {
+      if (i === 2 && startBefore > 3) {
+        pages.push(null); // ellipsis
+        continue;
+      }
+      if (i === startBefore - 1 && startBefore > 3) {
+        pages.push(null); // ellipsis
+      }
+      if (i < startBefore) continue;
+      pages.push(i);
+    }
+
+    // Pages around current
+    for (let i = Math.max(2, current - sideCount); i <= Math.min(total - 1, current + sideCount); i++) {
+      if (!pages.includes(i)) {
+        pages.push(i);
+      }
+    }
+
+    // Pages after current
+    const endAfter = Math.min(total - 1, current + sideCount);
+    if (endAfter < total - 1) {
+      if (endAfter < total - 2) {
+        pages.push(null); // ellipsis
+      }
+    }
+    for (let i = Math.max(endAfter + 1, 2); i <= total - 1; i++) {
+      if (!pages.includes(i)) {
+        pages.push(i);
+      }
+    }
+  }
+
+  if (total > 1) {
+    pages.push(total);
+  }
+
+  return pages.filter((p, i, arr) => {
+    // Remove duplicates
+    if (i === 0) return true;
+    return arr[i - 1] !== p;
+  });
+}
+
+const pageNumbers = generatePageNumbers(currentPage, totalPages, maxVisible);
+
+const prevPage = currentPage > 1 ? currentPage - 1 : null;
+const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+---
+
+{totalPages > 1 && (
+  <nav class="flex items-center justify-center gap-2 mt-8" aria-label="Pagination">
+    <!-- Previous -->
+    {prevPage ? (
+      <a
+        href={getPageUrl(prevPage)}
+        class="px-3 py-2 rounded-lg border border-secondary-200 text-secondary-600 hover:bg-secondary-50 hover:text-primary-600 transition-colors"
+        aria-label="Previous page"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </a>
+    ) : (
+      <span class="px-3 py-2 rounded-lg border border-secondary-200 text-secondary-300 cursor-not-allowed">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </span>
+    )}
+
+    <!-- Page Numbers -->
+    {pageNumbers.map((page) => {
+      if (page === null) {
+        return (
+          <span class="px-3 py-2 text-secondary-400">
+            &hellip;
+          </span>
+        );
+      }
+
+      const isActive = page === currentPage;
+
+      return isActive ? (
+        <span
+          class="px-4 py-2 rounded-lg bg-primary-600 text-white font-medium"
+          aria-current="page"
+        >
+          {page}
+        </span>
+      ) : (
+        <a
+          href={getPageUrl(page)}
+          class="px-4 py-2 rounded-lg border border-secondary-200 text-secondary-600 hover:bg-secondary-50 hover:text-primary-600 transition-colors"
+        >
+          {page}
+        </a>
+      );
+    })}
+
+    <!-- Next -->
+    {nextPage ? (
+      <a
+        href={getPageUrl(nextPage)}
+        class="px-3 py-2 rounded-lg border border-secondary-200 text-secondary-600 hover:bg-secondary-50 hover:text-primary-600 transition-colors"
+        aria-label="Next page"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    ) : (
+      <span class="px-3 py-2 rounded-lg border border-secondary-200 text-secondary-300 cursor-not-allowed">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </span>
+    )}
+  </nav>
+)}
+
+{totalPages > 1 && (
+  <div class="text-center text-sm text-secondary-500 mt-4">
+    Page {currentPage} of {totalPages}
+  </div>
+)}

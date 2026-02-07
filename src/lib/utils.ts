@@ -34,6 +34,7 @@ export function formatNumber(num: number): string {
  */
 export function formatDate(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return String(date);
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "long",
@@ -50,6 +51,7 @@ export function generateMetaDescription(
 ): string {
   // Remove HTML tags if present
   const cleanText = answer.replace(/<[^>]*>/g, "");
+  if (cleanText.length <= maxLength) return cleanText;
   // Take first sentence or truncate
   const firstSentence = cleanText.split(/[.!?]/)[0];
   return truncate(firstSentence || cleanText, maxLength);

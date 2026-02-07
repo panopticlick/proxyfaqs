@@ -1,17 +1,22 @@
 ---
+export const prerender = true;
+
 import Base from '../layouts/Base.astro';
+import { env } from '../lib/env';
+
+const siteUrl = env.SITE;
 
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
   name: 'About ProxyFAQs',
-  description: 'Learn about ProxyFAQs, the vendor-neutral knowledge platform for proxy and web scraping questions with 1M+ Q&A pairs.',
-  url: 'https://proxyfaqs.com/about',
+  description: 'Learn about ProxyFAQs, the vendor-neutral knowledge platform for proxy and web scraping questions with thousands of Q&A pairs.',
+  url: `${siteUrl}/about`,
   mainEntity: {
     '@type': 'Organization',
     name: 'ProxyFAQs',
-    url: 'https://proxyfaqs.com',
-    logo: 'https://proxyfaqs.com/favicon.svg',
+    url: siteUrl,
+    logo: `${siteUrl}/favicon.svg`,
     description: 'The Stack Overflow for Proxies - Vendor-neutral knowledge base for proxy and web scraping questions',
     foundingDate: '2024',
     knowsAbout: ['Proxy Servers', 'Web Scraping', 'Data Extraction', 'Residential Proxies', 'Datacenter Proxies'],
@@ -21,7 +26,7 @@ const jsonLd = {
 
 <Base
   title="About ProxyFAQs | The Stack Overflow for Proxies"
-  description="Learn about ProxyFAQs, the vendor-neutral knowledge platform for proxy and web scraping questions. 1M+ Q&A pairs, AI-powered assistance, and unbiased provider comparisons."
+  description="Learn about ProxyFAQs, the vendor-neutral knowledge platform for proxy and web scraping questions. Thousands of Q&A pairs, AI-powered assistance, and unbiased provider comparisons."
   jsonLd={jsonLd}
 >
   <!-- Hero Section -->
@@ -66,7 +71,7 @@ const jsonLd = {
             ProxyFAQs exists to solve one problem: <strong>finding reliable, vendor-neutral information about proxies should not be hard</strong>.
           </p>
           <p>
-            We are building the definitive knowledge hub for the proxy industry. Our database contains over <strong>1 million question-answer pairs</strong> covering everything from basic concepts like "What is a proxy server?" to advanced topics like IP rotation strategies, anti-detection techniques, and enterprise proxy architectures.
+            We are building the definitive knowledge hub for the proxy industry. Our database contains <strong>thousands of question-answer pairs</strong> covering everything from basic concepts like "What is a proxy server?" to advanced topics like IP rotation strategies, anti-detection techniques, and enterprise proxy architectures.
           </p>
           <p>
             Every answer is written in plain English. No jargon soup. No marketing fluff. Just clear, actionable information that helps you solve real problems.
@@ -103,7 +108,7 @@ const jsonLd = {
               Data-Driven
             </h3>
             <p class="text-secondary-600">
-              Every answer is backed by real-world data. We analyzed 1 million+ questions people actually ask Google about proxies and web scraping. Our content addresses the questions real users have, not the questions providers want you to ask.
+              Every answer is backed by real-world data. We analyzed tens of thousands of questions people actually ask about proxies and web scraping. Our content addresses the questions real users have, not the questions providers want you to ask.
             </p>
           </div>
 
@@ -239,7 +244,7 @@ const jsonLd = {
               <li><strong>Cloudflare Pages</strong> for global edge delivery under 50ms</li>
             </ul>
             <p>
-              Every page is pre-rendered at build time, ensuring instant load times regardless of your location. Our search uses PostgreSQL tsvector with weighted rankings and trigram similarity for fast, accurate results across 1 million+ questions.
+              Every page is pre-rendered at build time, ensuring instant load times regardless of your location. Our search uses PostgreSQL tsvector with weighted rankings and trigram similarity for fast, accurate results across thousands of questions.
             </p>
           </div>
         </div>
