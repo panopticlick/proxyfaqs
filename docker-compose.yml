@@ -37,6 +37,7 @@ services:
     networks:
       - internal
       - supabase_default
+      - nginx-proxy_default
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
@@ -74,4 +75,6 @@ networks:
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"
   supabase_default:
+    external: true
+  nginx-proxy_default:
     external: true
