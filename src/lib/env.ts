@@ -56,7 +56,7 @@ const envSchema = z
     DATABASE_URL: z.string().default(""),
 
     // Rate limiting
-    RATE_LIMIT_ENABLED: z.string().default("true").transform((v) => v === "true"),
+    RATE_LIMIT_ENABLED: z.union([z.string(), z.boolean()]).default("true").transform((v) => v === "true" || v === true),
     RATE_LIMIT_CHAT_REQUESTS: z.coerce.number().int().positive().default(20),
     RATE_LIMIT_CHAT_WINDOW: z.coerce.number().int().positive().default(60),
     RATE_LIMIT_SEARCH_REQUESTS: z.coerce.number().int().positive().default(60),
@@ -66,7 +66,7 @@ const envSchema = z
     PSEO_LIMIT: z.coerce.number().int().nonnegative().default(0),
     SITEMAP_QUESTION_LIMIT: z.coerce.number().int().positive().default(50000),
     BUILD_CHUNK_SIZE: z.coerce.number().int().positive().default(5000),
-    BUILD_PARALLEL: z.string().default("true").transform((v) => v === "true"),
+    BUILD_PARALLEL: z.union([z.string(), z.boolean()]).default("true").transform((v) => v === "true" || v === true),
 
     // CORS
     ALLOWED_ORIGINS: z.string().default("https://proxyfaqs.com,https://www.proxyfaqs.com"),
