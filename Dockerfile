@@ -19,7 +19,7 @@ WORKDIR /app
 COPY package*.json bun.lock* ./
 
 # Install all dependencies (including dev for build)
-RUN npm ci --prefer-offline && \
+RUN npm install && \
     npm cache clean --force
 
 # ============================================================
