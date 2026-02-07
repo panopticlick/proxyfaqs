@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import Papa from 'papaparse';
 import { slugify } from './utils';
 import { env } from './env';
@@ -23,7 +21,7 @@ export interface ProxyClusterPage {
   competitors: string[];
 }
 
-const DATA_PATH = path.resolve(process.cwd(), '..', 'data', 'proxy_clusters_2026-01-05.csv');
+const DATA_PATH_SUFFIX = ['..', 'data', 'proxy_clusters_2026-01-05.csv'];
 
 let cache: ProxyClusterPage[] | null = null;
 
@@ -55,12 +53,32 @@ function ensureUniqueSlug(base: string, counts: Map<string, number>): string {
 export function getProxyClusters(): ProxyClusterPage[] {
   if (cache) return cache;
 
-  if (!fs.existsSync(DATA_PATH)) {
+  // Dynamic import of Node.js modules (only available at build time, not in Workers)
+  // Use globalThis trick to prevent Vite/Rollup from statically analyzing the require
+  const _require = typeof globalThis.require === 'function' ? globalThis.require : undefined;
+  if (!_require) {
     cache = [];
     return cache;
   }
 
-  const rawCsv = fs.readFileSync(DATA_PATH, 'utf-8').replace(/^\uFEFF/, '');
+  let nodeFs: any;
+  let nodePath: any;
+  try {
+    nodeFs = _require('fs');
+    nodePath = _require('path');
+  } catch {
+    cache = [];
+    return cache;
+  }
+
+  const DATA_PATH = nodePath.resolve(process.cwd(), ...DATA_PATH_SUFFIX);
+
+  if (!nodeFs.existsSync(DATA_PATH)) {
+    cache = [];
+    return cache;
+  }
+
+  const rawCsv = nodeFs.readFileSync(DATA_PATH, 'utf-8').replace(/^\uFEFF/, '');
   const parsed = Papa.parse<Record<string, string>>(rawCsv, {
     header: true,
     skipEmptyLines: true,
