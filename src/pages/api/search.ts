@@ -132,6 +132,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     );
   }
 
+  const limit = sanitizeLimit(url.searchParams.get('limit'), MAX_SEARCH_LIMIT, 20);
+
   try {
     // Check cache
     const cacheKey = `${query.toLowerCase()}|${limit}|${category || ""}`;
@@ -192,4 +194,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       },
     );
   }
+};
+
+export const OPTIONS: APIRoute = async ({ request }) => {
+  return corsOptionsResponse(request.headers.get('origin'));
 };

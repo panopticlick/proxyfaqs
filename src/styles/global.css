@@ -9,7 +9,7 @@
 
   body {
     @apply bg-white text-secondary-900 antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   /* Custom scrollbar */
@@ -136,7 +136,7 @@
   }
 
   .provider-card::before {
-    content: "";
+    content: '';
     @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-primary-600;
   }
 

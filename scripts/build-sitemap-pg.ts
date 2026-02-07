@@ -107,7 +107,7 @@ async function buildSitemap() {
 
   try {
     await client.connect();
-    console.log("Connected to PostgreSQL\n");
+    console.log('Connected to PostgreSQL\n');
 
     const today = new Date().toISOString().split("T")[0];
     const sitemapFiles: string[] = [];
@@ -242,6 +242,6 @@ buildSitemap()
     process.exit(0);
   })
   .catch((error) => {
-    console.error("Fatal error:", error);
+    console.error('Fatal error:', error);
     process.exit(1);
   });

@@ -18,7 +18,7 @@ async function cleanup() {
 
   try {
     await client.connect();
-    console.log("Connected to PostgreSQL\n");
+    console.log('Connected to PostgreSQL\n');
 
     // Find and show bad provider records
     const badRecordsQuery = `
@@ -35,8 +35,7 @@ async function cleanup() {
     console.log(`Found ${result.rows.length} potentially bad records:\n`);
 
     for (const row of result.rows) {
-      const displayName =
-        row.name.length > 60 ? row.name.slice(0, 60) + "..." : row.name;
+      const displayName = row.name.length > 60 ? row.name.slice(0, 60) + '...' : row.name;
       console.log(`  - [${row.slug}] ${displayName}`);
     }
 
@@ -55,9 +54,7 @@ async function cleanup() {
     }
 
     // Show remaining count
-    const countResult = await client.query(
-      "SELECT COUNT(*) FROM proxyfaqs.providers",
-    );
+    const countResult = await client.query('SELECT COUNT(*) FROM proxyfaqs.providers');
     console.log(`\nRemaining providers: ${countResult.rows[0].count}`);
   } finally {
     await client.end();
@@ -65,5 +62,5 @@ async function cleanup() {
 }
 
 cleanup()
-  .then(() => console.log("\nCleanup complete!"))
-  .catch((err) => console.error("Error:", err));
+  .then(() => console.log('\nCleanup complete!'))
+  .catch((err) => console.error('Error:', err));

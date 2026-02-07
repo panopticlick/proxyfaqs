@@ -20,11 +20,11 @@ const BATCH_SIZE = 1000;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 interface PAARow {
-  "PAA Title": string;
+  'PAA Title': string;
   Parent: string;
   Text: string;
   URL: string;
-  "URL Title": string;
+  'URL Title': string;
 }
 
 interface Question {
@@ -44,8 +44,8 @@ interface Question {
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
     .substring(0, 200);
 }
 
@@ -56,32 +56,29 @@ function categorizeQuestion(keyword: string): {
 } {
   const keywordLower = keyword.toLowerCase();
 
-  if (keywordLower.includes("residential")) {
-    return { category: "Residential Proxies", slug: "residential-proxies" };
-  } else if (keywordLower.includes("scraper") || keywordLower.includes("api")) {
-    return { category: "Scraper API", slug: "scraper-api" };
-  } else if (keywordLower.includes("scraping")) {
-    return { category: "Web Scraping", slug: "web-scraping" };
-  } else if (keywordLower.includes("datacenter")) {
-    return { category: "Datacenter Proxies", slug: "datacenter-proxies" };
-  } else if (keywordLower.includes("mobile")) {
-    return { category: "Mobile Proxies", slug: "mobile-proxies" };
-  } else if (
-    keywordLower.includes("provider") ||
-    keywordLower.includes("service")
-  ) {
-    return { category: "Proxy Providers", slug: "proxy-providers" };
+  if (keywordLower.includes('residential')) {
+    return { category: 'Residential Proxies', slug: 'residential-proxies' };
+  } else if (keywordLower.includes('scraper') || keywordLower.includes('api')) {
+    return { category: 'Scraper API', slug: 'scraper-api' };
+  } else if (keywordLower.includes('scraping')) {
+    return { category: 'Web Scraping', slug: 'web-scraping' };
+  } else if (keywordLower.includes('datacenter')) {
+    return { category: 'Datacenter Proxies', slug: 'datacenter-proxies' };
+  } else if (keywordLower.includes('mobile')) {
+    return { category: 'Mobile Proxies', slug: 'mobile-proxies' };
+  } else if (keywordLower.includes('provider') || keywordLower.includes('service')) {
+    return { category: 'Proxy Providers', slug: 'proxy-providers' };
   } else {
-    return { category: "Proxy Basics", slug: "proxy-basics" };
+    return { category: 'Proxy Basics', slug: 'proxy-basics' };
   }
 }
 
 // Utility: Parse CSV manually (handles quoted fields)
 function parseCSV(content: string): PAARow[] {
-  const lines = content.split("\n");
+  const lines = content.split('\n');
   const headers = lines[0]
-    .replace(/^\uFEFF/, "")
-    .split(",")
+    .replace(/^\uFEFF/, '')
+    .split(',')
     .map((h) => h.trim());
   const rows: PAARow[] = [];
 
@@ -91,7 +88,7 @@ function parseCSV(content: string): PAARow[] {
 
     // Simple CSV parser - handles basic quoted fields
     const values: string[] = [];
-    let currentValue = "";
+    let currentValue = '';
     let inQuotes = false;
 
     for (let j = 0; j < line.length; j++) {
@@ -99,9 +96,9 @@ function parseCSV(content: string): PAARow[] {
 
       if (char === '"') {
         inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
+      } else if (char === ',' && !inQuotes) {
         values.push(currentValue.trim());
-        currentValue = "";
+        currentValue = '';
       } else {
         currentValue += char;
       }
@@ -110,11 +107,11 @@ function parseCSV(content: string): PAARow[] {
 
     if (values.length >= 5) {
       rows.push({
-        "PAA Title": values[0]?.replace(/^"|"$/g, "") || "",
-        Parent: values[1]?.replace(/^"|"$/g, "") || "",
-        Text: values[2]?.replace(/^"|"$/g, "") || "",
-        URL: values[3]?.replace(/^"|"$/g, "") || "",
-        "URL Title": values[4]?.replace(/^"|"$/g, "") || "",
+        'PAA Title': values[0]?.replace(/^"|"$/g, '') || '',
+        Parent: values[1]?.replace(/^"|"$/g, '') || '',
+        Text: values[2]?.replace(/^"|"$/g, '') || '',
+        URL: values[3]?.replace(/^"|"$/g, '') || '',
+        'URL Title': values[4]?.replace(/^"|"$/g, '') || '',
       });
     }
   }
@@ -124,28 +121,26 @@ function parseCSV(content: string): PAARow[] {
 
 // Utility: Convert PAA row to Question
 function convertToQuestion(row: PAARow): Question | null {
-  if (!row["PAA Title"] || !row["Text"]) {
+  if (!row['PAA Title'] || !row['Text']) {
     return null;
   }
 
-  const question = row["PAA Title"].trim();
-  const answer = row["Text"].trim();
+  const question = row['PAA Title'].trim();
+  const answer = row['Text'].trim();
   const slug = generateSlug(question);
-  const { category, slug: categorySlug } = categorizeQuestion(
-    row["Parent"] || "",
-  );
+  const { category, slug: categorySlug } = categorizeQuestion(row['Parent'] || '');
 
   // Generate HTML answer with source link
   const answerHtml = `
     <p>${answer}</p>
     ${
-      row["URL"]
+      row['URL']
         ? `<p class="text-sm text-gray-600 mt-4">
-      Source: <a href="${row["URL"]}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">
-        ${row["URL Title"] || "Learn more"}
+      Source: <a href="${row['URL']}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">
+        ${row['URL Title'] || 'Learn more'}
       </a>
     </p>`
-        : ""
+        : ''
     }
   `.trim();
 
@@ -156,27 +151,26 @@ function convertToQuestion(row: PAARow): Question | null {
     answer_html: answerHtml,
     category,
     category_slug: categorySlug,
-    source_keyword: row["Parent"] || "",
-    source_url: row["URL"] || "",
+    source_keyword: row['Parent'] || '',
+    source_url: row['URL'] || '',
     meta_title: `${question} | ProxyFAQs`,
-    meta_description:
-      answer.substring(0, 155) + (answer.length > 155 ? "..." : ""),
+    meta_description: answer.substring(0, 155) + (answer.length > 155 ? '...' : ''),
   };
 }
 
 // Main import function
 async function importPAAData() {
-  console.log("🚀 Starting PAA data import...\n");
+  console.log('🚀 Starting PAA data import...\n');
 
   // Find all PAA CSV files
   const paaFiles = fs
     .readdirSync(DATA_DIR)
-    .filter((f) => f.startsWith("google-paa-") && f.endsWith(".csv"))
+    .filter((f) => f.startsWith('google-paa-') && f.endsWith('.csv'))
     .map((f) => path.join(DATA_DIR, f));
 
   console.log(`📁 Found ${paaFiles.length} PAA CSV files:\n`);
   paaFiles.forEach((f) => console.log(`   - ${path.basename(f)}`));
-  console.log("");
+  console.log('');
 
   let totalProcessed = 0;
   let totalImported = 0;
@@ -186,7 +180,7 @@ async function importPAAData() {
   for (const filePath of paaFiles) {
     console.log(`\n📂 Processing: ${path.basename(filePath)}`);
 
-    const content = fs.readFileSync(filePath, "utf-8");
+    const content = fs.readFileSync(filePath, 'utf-8');
     const rows = parseCSV(content);
 
     console.log(`   Found ${rows.length} rows`);
@@ -214,15 +208,15 @@ async function importPAAData() {
       // Batch insert when we reach BATCH_SIZE
       if (questions.length >= BATCH_SIZE) {
         const { error } = await supabase
-          .from("questions")
-          .upsert(questions, { onConflict: "slug", ignoreDuplicates: true });
+          .from('questions')
+          .upsert(questions, { onConflict: 'slug', ignoreDuplicates: true });
 
         if (error) {
           console.error(`   ❌ Error inserting batch: ${error.message}`);
         } else {
           totalImported += questions.length;
           console.log(
-            `   ✅ Imported batch of ${questions.length} questions (Total: ${totalImported})`,
+            `   ✅ Imported batch of ${questions.length} questions (Total: ${totalImported})`
           );
         }
 
@@ -233,16 +227,14 @@ async function importPAAData() {
     // Insert remaining questions
     if (questions.length > 0) {
       const { error } = await supabase
-        .from("questions")
-        .upsert(questions, { onConflict: "slug", ignoreDuplicates: true });
+        .from('questions')
+        .upsert(questions, { onConflict: 'slug', ignoreDuplicates: true });
 
       if (error) {
         console.error(`   ❌ Error inserting final batch: ${error.message}`);
       } else {
         totalImported += questions.length;
-        console.log(
-          `   ✅ Imported final batch of ${questions.length} questions`,
-        );
+        console.log(`   ✅ Imported final batch of ${questions.length} questions`);
       }
     }
 
@@ -250,38 +242,38 @@ async function importPAAData() {
   }
 
   // Update category counts
-  console.log("\n📊 Updating category question counts...");
-  const { data: categories } = await supabase.from("categories").select("slug");
+  console.log('\n📊 Updating category question counts...');
+  const { data: categories } = await supabase.from('categories').select('slug');
 
   if (categories) {
     for (const cat of categories) {
       const { count } = await supabase
-        .from("questions")
-        .select("*", { count: "exact", head: true })
-        .eq("category_slug", cat.slug);
+        .from('questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('category_slug', cat.slug);
 
       await supabase
-        .from("categories")
+        .from('categories')
         .update({ question_count: count || 0 })
-        .eq("slug", cat.slug);
+        .eq('slug', cat.slug);
     }
   }
 
-  console.log("\n✅ Import complete!\n");
-  console.log("📈 Summary:");
+  console.log('\n✅ Import complete!\n');
+  console.log('📈 Summary:');
   console.log(`   Total rows processed: ${totalProcessed}`);
   console.log(`   Questions imported: ${totalImported}`);
   console.log(`   Skipped (duplicates/invalid): ${totalSkipped}`);
-  console.log("");
+  console.log('');
 }
 
 // Run import
 importPAAData()
   .then(() => {
-    console.log("✨ All done!");
+    console.log('✨ All done!');
     process.exit(0);
   })
   .catch((error) => {
-    console.error("❌ Fatal error:", error);
+    console.error('❌ Fatal error:', error);
     process.exit(1);
   });

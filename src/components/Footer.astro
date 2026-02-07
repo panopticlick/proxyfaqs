@@ -3,14 +3,15 @@ const footerLinks = {
   resources: [
     { href: '/q', label: 'All Questions' },
     { href: '/category', label: 'Categories' },
+    { href: '/use-cases', label: 'Use Cases' },
     { href: '/providers', label: 'Provider Comparison' },
     { href: '/guides', label: 'Guides' },
   ],
   categories: [
-    { href: '/category/residential-proxy', label: 'Residential Proxies' },
-    { href: '/category/datacenter-proxy', label: 'Datacenter Proxies' },
+    { href: '/category/residential-proxies', label: 'Residential Proxies' },
+    { href: '/category/datacenter-proxies', label: 'Datacenter Proxies' },
     { href: '/category/web-scraping', label: 'Web Scraping' },
-    { href: '/category/proxy-fundamentals', label: 'Proxy Fundamentals' },
+    { href: '/category/proxy-basics', label: 'Proxy Basics' },
   ],
   company: [
     { href: '/about', label: 'About Us' },
@@ -30,9 +31,20 @@ const contactEmail = 'hello@proxyfaqs.com';
       <div class="lg:col-span-1">
         <a href="/" class="flex items-center gap-2 text-white mb-4">
           <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2.5" class="text-primary-500"/>
-            <circle cx="16" cy="16" r="6" fill="currentColor" class="text-primary-500"/>
-            <path d="M16 2V8M16 24V30M2 16H8M24 16H30" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="text-primary-400"/>
+            <circle
+              cx="16"
+              cy="16"
+              r="14"
+              stroke="currentColor"
+              stroke-width="2.5"
+              class="text-primary-500"></circle>
+            <circle cx="16" cy="16" r="6" fill="currentColor" class="text-primary-500"></circle>
+            <path
+              d="M16 2V8M16 24V30M2 16H8M24 16H30"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              class="text-primary-400"></path>
           </svg>
           <span class="text-xl font-bold">ProxyFAQs</span>
         </a>
@@ -41,34 +53,47 @@ const contactEmail = 'hello@proxyfaqs.com';
         </p>
         <p class="text-xs text-secondary-500">
           Affiliate Disclosure: Some links may earn us a commission at no extra cost to you.
+          <a href="/privacy#affiliate-disclosure" class="text-primary-600 hover:underline"
+            >Learn more</a
+          >.
         </p>
       </div>
 
       <!-- Resources -->
       <div>
         <h3 class="text-white font-semibold mb-4">Resources</h3>
-        <ul class="space-y-2">
-          {footerLinks.resources.map((link) => (
-            <li>
-              <a href={link.href} class="text-sm text-secondary-400 hover:text-white transition-colors">
-                {link.label}
-              </a>
-            </li>
-          ))}
+        <ul class="space-y-1">
+          {
+            footerLinks.resources.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="text-sm text-secondary-400 hover:text-white transition-colors inline-block py-2 min-h-[44px]"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
         </ul>
       </div>
 
       <!-- Categories -->
       <div>
         <h3 class="text-white font-semibold mb-4">Popular Categories</h3>
-        <ul class="space-y-2">
-          {footerLinks.categories.map((link) => (
-            <li>
-              <a href={link.href} class="text-sm text-secondary-400 hover:text-white transition-colors">
-                {link.label}
-              </a>
-            </li>
-          ))}
+        <ul class="space-y-1">
+          {
+            footerLinks.categories.map((link) => (
+              <li>
+                <a
+                  href={link.href}
+                  class="text-sm text-secondary-400 hover:text-white transition-colors inline-block py-2 min-h-[44px]"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
         </ul>
       </div>
 

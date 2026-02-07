@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+.build
+.astro
+
+# Public files
+public
+
+# Config files that have their own formatting
+package-lock.json
+bun.lock
+pnpm-lock.yaml
+yarn.lock
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache
+.parcel-cache

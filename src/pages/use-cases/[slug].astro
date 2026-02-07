@@ -1,0 +1,289 @@
+---
+import Base from '../../layouts/Base.astro';
+import AffiliateProviderCard from '../../components/AffiliateProviderCard.astro';
+import {
+  generateArticleSchema,
+  generateBreadcrumbSchema,
+  generateFAQSchema,
+  generateHowToSchema,
+} from '../../lib/utils';
+import {
+  getProxyClusterBySlug,
+  getProxyClusters,
+  getRelatedProxyClusters,
+  inferProxyType,
+} from '../../lib/pseo';
+import { guides } from '../../lib/guides';
+import { getProvidersForType } from '../../lib/affiliate';
+
+export async function getStaticPaths() {
+  return getProxyClusters()
+    .filter((page) => page.slug && page.slug.trim() !== '')
+    .map((page) => ({ params: { slug: page.slug } }));
+}
+
+const { slug } = Astro.params;
+const page = getProxyClusterBySlug(slug);
+
+if (!page) {
+  return Astro.redirect('/404');
+}
+
+const siteUrl = 'https://proxyfaqs.com';
+const pageUrl = `${siteUrl}/use-cases/${page.slug}`;
+const proxyType = inferProxyType(page);
+const providers = getProvidersForType(proxyType, 3);
+const relatedPages = getRelatedProxyClusters(page, 6);
+const relatedGuides = guides
+  .filter(
+    (guide) =>
+      guide.title.toLowerCase().includes(page.topic.toLowerCase()) ||
+      guide.title.toLowerCase().includes(proxyType) ||
+      page.keyword.toLowerCase().includes(guide.category.toLowerCase())
+  )
+  .slice(0, 3);
+
+const faqItems = [
+  {
+    question: `What proxy type works best for ${page.keyword}?`,
+    answer: `For ${page.keyword}, ${proxyType} proxies typically provide the best balance of success rate and stability.`,
+  },
+  {
+    question: `How do I reduce blocks when targeting ${page.keyword}?`,
+    answer: `Rotate IPs, add realistic headers, slow request rates, and use sticky sessions for login-heavy flows.`,
+  },
+  {
+    question: `Should I use rotating or sticky sessions for ${page.keyword}?`,
+    answer: `Use rotating proxies for high-volume discovery, and sticky sessions when accounts or carts are involved.`,
+  },
+  {
+    question: `How do I monitor proxy performance for ${page.keyword}?`,
+    answer: `Track success rate, response time, and block signals. Adjust IP rotation and throttling based on results.`,
+  },
+];
+
+const jsonLd = [
+  generateBreadcrumbSchema([
+    { name: 'Home', url: siteUrl },
+    { name: 'Use Cases', url: `${siteUrl}/use-cases` },
+    { name: page.pageTitle, url: pageUrl },
+  ]),
+  generateArticleSchema({
+    title: page.pageTitle,
+    description: `Practical guidance for ${page.keyword}: proxy type recommendations, setup checklist, and troubleshooting tips.`,
+    url: pageUrl,
+    datePublished: '2026-01-05',
+    dateModified: '2026-01-05',
+  }),
+  generateFAQSchema(faqItems),
+  generateHowToSchema({
+    name: `How to set up proxies for ${page.keyword}`,
+    description: `Quick setup steps for ${page.keyword}`,
+    steps: [
+      `Pick a ${proxyType} proxy pool that matches your target geography.`,
+      'Configure rotation rules and sticky sessions for login workflows.',
+      'Throttle requests and monitor block rates with retry backoff.',
+    ],
+  }),
+];
+---
+
+<Base
+  title={`${page.pageTitle} | ProxyFAQs`}
+  description={`Practical guidance for ${page.keyword}: proxy type recommendations, setup checklist, and troubleshooting tips.`}
+  canonicalUrl={pageUrl}
+  jsonLd={jsonLd}
+>
+  <article class="py-10 bg-secondary-50">
+    <div class="container-custom">
+      <nav class="mb-6 text-sm text-secondary-500" aria-label="Breadcrumb">
+        <ol class="flex flex-wrap items-center gap-2">
+          <li>
+            <a href="/" class="hover:text-primary-600">Home</a>
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+              ></path>
+            </svg>
+            <a href="/use-cases" class="hover:text-primary-600">Use Cases</a>
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+              ></path>
+            </svg>
+            <span class="text-secondary-900">{page.pageTitle}</span>
+          </li>
+        </ol>
+      </nav>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <main class="lg:col-span-2 space-y-6">
+          <div class="card">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-secondary-500 mb-4">
+              <span class="badge-secondary">{page.topic}</span>
+              <span class="badge-primary capitalize">{proxyType} proxies</span>
+              {page.intent && <span class="badge-secondary">Intent: {page.intent}</span>}
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-secondary-900 mb-4">
+              {page.pageTitle}
+            </h1>
+            <p class="text-lg text-secondary-600 mb-6">
+              Use this guide to choose the right proxy type and setup flow for <strong
+                >{page.keyword}</strong
+              >. We cover proxy recommendations, setup steps, and troubleshooting tips.
+            </p>
+
+            {
+              page.tags.length > 0 && (
+                <div class="flex flex-wrap gap-2 mb-6">
+                  {page.tags.slice(0, 8).map((tag) => (
+                    <span class="badge-secondary">{tag}</span>
+                  ))}
+                </div>
+              )
+            }
+
+            <div class="grid md:grid-cols-3 gap-4">
+              <div class="p-4 rounded-lg bg-secondary-50">
+                <p class="text-xs uppercase text-secondary-500">Search Volume</p>
+                <p class="text-lg font-semibold text-secondary-900">
+                  {page.volume ? page.volume.toLocaleString() : 'N/A'}
+                </p>
+              </div>
+              <div class="p-4 rounded-lg bg-secondary-50">
+                <p class="text-xs uppercase text-secondary-500">Difficulty</p>
+                <p class="text-lg font-semibold text-secondary-900">
+                  {page.difficulty ?? 'N/A'}
+                </p>
+              </div>
+              <div class="p-4 rounded-lg bg-secondary-50">
+                <p class="text-xs uppercase text-secondary-500">CPC</p>
+                <p class="text-lg font-semibold text-secondary-900">
+                  {page.cpc ? `$${page.cpc.toFixed(2)}` : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            {
+              page.serpFeatures.length > 0 && (
+                <div class="mt-6">
+                  <h3 class="text-sm font-semibold text-secondary-900 mb-2">
+                    SERP features observed
+                  </h3>
+                  <div class="flex flex-wrap gap-2">
+                    {page.serpFeatures.map((feature) => (
+                      <span class="badge-secondary">{feature}</span>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+          </div>
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Recommended proxy type</h2>
+            <p class="text-secondary-600 mb-4">
+              Based on the target, intent, and common block patterns, <strong class="capitalize"
+                >{proxyType}</strong
+              > proxies provide the best success rate for <strong>{page.keyword}</strong>.
+            </p>
+            <ul class="space-y-2 text-secondary-600">
+              <li>• Rotate IPs for discovery, use sticky sessions for logins and carts.</li>
+              <li>• Keep concurrency conservative and scale gradually.</li>
+              <li>• Monitor block pages and retry with exponential backoff.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Quick setup checklist</h2>
+            <ol class="list-decimal list-inside text-secondary-600 space-y-2">
+              <li>Choose a {proxyType} proxy pool with the target geography you need.</li>
+              <li>Configure rotation rules and session length in your proxy manager.</li>
+              <li>Throttle requests, randomize headers, and validate responses.</li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">FAQ</h2>
+            <div class="space-y-4">
+              {
+                faqItems.map((item) => (
+                  <div>
+                    <h3 class="font-semibold text-secondary-900">{item.question}</h3>
+                    <p class="text-secondary-600 mt-1">{item.answer}</p>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </main>
+
+        <aside class="lg:col-span-1">
+          <div class="sticky top-24 space-y-6">
+            <div class="card">
+              <h2 class="font-semibold text-secondary-900 mb-3">Recommended providers</h2>
+              <p class="text-sm text-secondary-600 mb-4">
+                Curated options based on proxy type and coverage. Affiliate links disclosed.
+              </p>
+              <div class="grid gap-4">
+                {providers.map((provider) => <AffiliateProviderCard provider={provider} />)}
+              </div>
+              <p class="text-xs text-secondary-500 mt-4">
+                Affiliate disclosure: we may earn a commission at no extra cost to you.
+              </p>
+            </div>
+
+            <div class="card">
+              <h2 class="font-semibold text-secondary-900 mb-3">Related use cases</h2>
+              <div class="space-y-2">
+                {
+                  relatedPages.map((related) => (
+                    <a
+                      href={`/use-cases/${related.slug}`}
+                      class="block px-3 py-2 rounded-lg text-sm text-secondary-600 hover:bg-secondary-50 hover:text-primary-600"
+                    >
+                      {related.pageTitle}
+                    </a>
+                  ))
+                }
+              </div>
+            </div>
+
+            {
+              relatedGuides.length > 0 && (
+                <div class="card">
+                  <h2 class="font-semibold text-secondary-900 mb-3">Related guides</h2>
+                  <div class="space-y-2">
+                    {relatedGuides.map((guide) => (
+                      <a
+                        href={`/guides/${guide.slug}`}
+                        class="block px-3 py-2 rounded-lg text-sm text-secondary-600 hover:bg-secondary-50 hover:text-primary-600"
+                      >
+                        {guide.title}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+
+            <div class="card bg-gradient-to-br from-primary-50 to-white">
+              <h2 class="font-semibold text-secondary-900 mb-2">Explore answers</h2>
+              <p class="text-sm text-secondary-600 mb-4">
+                Search the knowledge base for related questions and troubleshooting tips.
+              </p>
+              <a
+                href={`/search?q=${encodeURIComponent(page.keyword)}`}
+                class="btn-primary w-full text-center text-sm"
+              >
+                Search “{page.keyword}”
+              </a>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </article>
+</Base>

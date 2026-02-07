@@ -154,6 +154,9 @@ const keywords = [
             </ol>
           </nav>
 
+          <!-- Affiliate Disclosure (when provider recommendations are present) -->
+          {hasProviderMentions && <AffiliateDisclosure variant="banner" />}
+
           <!-- Question Card -->
           <div class="card mb-8" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
             <div class="flex items-start gap-4 mb-6">

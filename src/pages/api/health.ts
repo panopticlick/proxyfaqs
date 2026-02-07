@@ -121,3 +121,7 @@ export const GET: APIRoute = async ({ url }) => {
     },
   });
 };
+
+export const OPTIONS: APIRoute = async ({ request }) => {
+  return corsOptionsResponse(request.headers.get('origin'));
+};

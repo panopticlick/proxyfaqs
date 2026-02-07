@@ -1,23 +1,17 @@
-# Wrangler Configuration Template for ProxyFAQs
-# Copy this file to wrangler.toml and fill in your values
-# DO NOT commit wrangler.toml to git!
+# ProxyFAQs - Cloudflare Pages Configuration
+# Copy to wrangler.toml and configure for local development
+# NEVER commit wrangler.toml - use environment variables in CI/CD
 
 name = "proxyfaqs"
 compatibility_date = "2024-12-01"
 pages_build_output_dir = "dist"
 
-# Account ID - set via environment variable CLOUDFLARE_ACCOUNT_ID
-# or uncomment and fill in below (not recommended for public repos)
-# account_id = "your-account-id-here"
-
-# Environment variables for the Pages Function
-# These should be set via wrangler secret or Cloudflare dashboard
-# Required secrets:
-#   - OPENROUTER_API_KEY
-#   - SUPABASE_SERVICE_KEY
-#
-# Optional:
-#   - OPENROUTER_MODEL (default: meta-llama/llama-3.3-70b-instruct:free)
+# Account ID: set via environment variable CLOUDFLARE_ACCOUNT_ID
+# DO NOT hardcode account_id here
 
 [vars]
-OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+# Add any public environment variables here
+# OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+
+# Deployment command:
+# CLOUDFLARE_API_TOKEN=xxx CLOUDFLARE_ACCOUNT_ID=xxx npx wrangler pages deploy dist --project-name proxyfaqs

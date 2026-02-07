@@ -15,8 +15,8 @@ export default defineConfig({
   integrations: [
     tailwind(),
     sitemap({
-      filter: (page) => !page.includes("/api/"),
-      changefreq: "weekly",
+      filter: (page) => !page.includes('/api/'),
+      changefreq: 'weekly',
       priority: 0.7,
     }),
   ],
@@ -27,7 +27,8 @@ export default defineConfig({
     },
   }),
   build: {
-    format: "directory",
+    format: 'directory',
+    assets: '_assets',
   },
   vite: {
     define: {

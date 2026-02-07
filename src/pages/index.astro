@@ -24,6 +24,9 @@ let categories: any[] = [];
 let popularQuestions: any[] = [];
 let featuredProviders: any[] = [];
 let stats: any = { totalQuestions: 0, totalCategories: 0, totalProviders: 0 };
+const useCases = [...getProxyClusters()]
+  .sort((a, b) => (b.volume || 0) - (a.volume || 0))
+  .slice(0, 4);
 
 try {
   [categories, popularQuestions, featuredProviders, stats] = await Promise.all([
@@ -213,9 +216,7 @@ const jsonLd = [
       </div>
 
       <div class="grid gap-4 md:grid-cols-2">
-        {popularQuestions.map((question) => (
-          <QuestionCard question={question} />
-        ))}
+        {popularQuestions.map((question) => <QuestionCard question={question} />)}
       </div>
     </div>
   </section>
@@ -233,9 +234,7 @@ const jsonLd = [
       </div>
 
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {featuredProviders.map((provider) => (
-          <ProviderCard provider={provider} />
-        ))}
+        {featuredProviders.map((provider) => <ProviderCard provider={provider} />)}
       </div>
 
       <div class="text-center mt-8">

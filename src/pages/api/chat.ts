@@ -52,7 +52,7 @@ When answering:
 1. Be technical but accessible - explain complex concepts simply
 2. Recommend specific proxy types based on the user's use case
 3. When recommending providers, explain WHY based on their specific needs
-4. Include affiliate links naturally when relevant (always disclosed)
+4. CRITICAL: When including ANY affiliate link or provider recommendation, ALWAYS add this exact disclosure at the end: "**Affiliate Disclosure: Some links below are affiliate links. We may earn a commission at no cost to you.**"
 5. Acknowledge limitations and edge cases
 6. Provide code examples in Python when helpful
 
@@ -127,8 +127,8 @@ async function callAIProvider(
 
   try {
     const response = await fetch(apiUrl, {
-      method: "POST",
-      headers,
+      method: 'POST',
+      headers: fetchHeaders,
       body: JSON.stringify({
         model,
         messages,
@@ -296,7 +296,32 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { ...JSON_HEADERS, ...rateLimitHeaders } },
     );
   } catch (error) {
-    console.error("Chat API error:", error);
+    const duration = performance.now() - start;
+    recordHistogram(Metrics.API_REQUEST_DURATION, duration, {
+      endpoint: 'chat',
+      status: 'error',
+    });
+    incrementCounter(Metrics.CHAT_ERROR_COUNT, 1, {
+      error: error instanceof Error ? error.name : 'unknown',
+    });
+
+    captureError(error, {
+      requestId,
+      endpoint: 'chat',
+    });
+
+    logger.error('Chat API error', error, {
+      requestId,
+      duration,
+    });
+
+    const responseHeaders = new Headers({
+      'Content-Type': 'application/json',
+      ...getCorsHeaders(origin),
+      'X-Request-ID': requestId,
+    });
+    addSecurityHeaders(responseHeaders);
+
     return new Response(
       JSON.stringify({
         error: "Failed to process request",
@@ -305,4 +330,8 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 500, headers: { ...JSON_HEADERS, ...rateLimitHeaders } },
     );
   }
+};
+
+export const OPTIONS: APIRoute = async ({ request }) => {
+  return corsOptionsResponse(request.headers.get('origin'));
 };
