@@ -24,9 +24,6 @@ let categories: any[] = [];
 let popularQuestions: any[] = [];
 let featuredProviders: any[] = [];
 let stats: any = { totalQuestions: 0, totalCategories: 0, totalProviders: 0 };
-const useCases = [...getProxyClusters()]
-  .sort((a, b) => (b.volume || 0) - (a.volume || 0))
-  .slice(0, 4);
 
 try {
   [categories, popularQuestions, featuredProviders, stats] = await Promise.all([

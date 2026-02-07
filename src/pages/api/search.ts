@@ -132,8 +132,6 @@ export const GET: APIRoute = async ({ request, url }) => {
     );
   }
 
-  const limit = sanitizeLimit(url.searchParams.get('limit'), MAX_SEARCH_LIMIT, 20);
-
   try {
     // Check cache
     const cacheKey = `${query.toLowerCase()}|${limit}|${category || ""}`;

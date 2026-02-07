@@ -15,14 +15,14 @@ try {
   console.error('Error fetching popular questions:', error);
 }
 
-const title = query ? `Search: ${query}` : 'Search';
+const title = 'Search';
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/search`;
 ---
 
 <Base
   title={title}
-  description={query ? `Search results for "${query}" - Find answers about proxies and web scraping` : 'Search our knowledge base of proxy and web scraping questions'}
+  description='Search our knowledge base of proxy and web scraping questions'
   canonicalUrl={pageUrl}
   noindex={true}
 >

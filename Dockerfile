@@ -13,10 +13,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean
 
-WORKDIR /app/front
+WORKDIR /app
 
 # Copy package files for dependency caching
-COPY front/package*.json ./
+COPY package*.json bun.lock* ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci --prefer-offline && \
@@ -30,13 +30,13 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
-COPY --from=deps /app/front/node_modules ./front/node_modules
+COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
-COPY front ./front
-COPY data ./data
+COPY . .
 
-WORKDIR /app/front
+# Use Node.js adapter config for Docker build
+RUN cp astro.config.docker.mjs astro.config.mjs
 
 # Set build-time environment variables
 ARG SITE_URL=https://proxyfaqs.com
@@ -75,23 +75,23 @@ RUN apt-get update && \
     groupadd -r proxyfaqs && \
     useradd -r -g proxyfaqs -d /app -s /sbin/nologin proxyfaqs
 
-WORKDIR /app/front
+WORKDIR /app
 
 # Set production environment
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOST=0.0.0.0
 
 # Copy package files
-COPY --from=builder /app/front/package*.json ./
+COPY --from=builder /app/package*.json ./
 
 # Copy node_modules and prune dev dependencies
-COPY --from=builder /app/front/node_modules ./node_modules
+COPY --from=builder /app/node_modules ./node_modules
 RUN npm prune --omit=dev && \
     npm cache clean --force
 
 # Copy built application
-COPY --from=builder /app/front/dist ./dist
-COPY --from=builder /app/front/server.mjs ./server.mjs
+COPY --from=builder /app/dist ./dist
 
 # Set ownership to non-root user
 RUN chown -R proxyfaqs:proxyfaqs /app
@@ -108,4 +108,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server.mjs"]
+CMD ["node", "dist/server/entry.mjs"]
