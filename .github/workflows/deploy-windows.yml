@@ -33,67 +33,63 @@ jobs:
     name: Deploy to 192.168.2.8
     runs-on: [self-hosted, openclaw-192-168-2-8]
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: powershell
 
     steps:
       - name: Pull latest code
+        shell: cmd
         run: |
-          cd ${{ env.DEPLOY_DIR }}
+          cd /d %DEPLOY_DIR%
           git fetch origin main
           git reset --hard origin/main
-          Write-Host "Checked out commit: $(git rev-parse --short HEAD)"
+          git rev-parse --short HEAD
 
       - name: Rebuild openclaw:local image
         if: github.event.inputs.rebuild-image == 'true'
+        shell: cmd
         run: |
-          cd ${{ env.DEPLOY_DIR }}
-          Write-Host "Building openclaw:local from Dockerfile..."
+          cd /d %DEPLOY_DIR%
+          echo Building openclaw:local from Dockerfile...
           docker build -t openclaw:local -f Dockerfile .
-          Write-Host "Done. Image size:"
-          docker images openclaw:local --format "{{.Size}}"
 
       - name: Rebuild openclaw:ready image
         if: github.event.inputs.rebuild-custom == 'true'
+        shell: cmd
         run: |
-          cd ${{ env.DEPLOY_DIR }}
-          if (Test-Path Dockerfile.custom) {
-            Write-Host "Building openclaw:ready from Dockerfile.custom..."
+          cd /d %DEPLOY_DIR%
+          if exist Dockerfile.custom (
+            echo Building openclaw:ready from Dockerfile.custom...
             docker build -t openclaw:ready -f Dockerfile.custom .
-            Write-Host "Done. Image size:"
-            docker images openclaw:ready --format "{{.Size}}"
-          } else {
-            Write-Host "Dockerfile.custom not found, skipping"
-          }
+          ) else (
+            echo Dockerfile.custom not found, skipping
+          )
 
       - name: Restart containers
+        shell: cmd
         run: |
-          cd ${{ env.DEPLOY_DIR }}
+          cd /d %DEPLOY_DIR%
           docker compose up -d --force-recreate openclaw-gateway
-          Write-Host "Container recreated"
+          echo Container recreated
 
       - name: Health check
+        shell: cmd
         run: |
-          Write-Host "Waiting 15s for startup..."
-          Start-Sleep -Seconds 15
-          $info = docker ps --filter "name=openclaw-gateway" --format "{{.Names}}|{{.Status}}|{{.Ports}}"
-          if ($info) {
-            Write-Host "Container running: $info"
-          } else {
-            Write-Host "ERROR: openclaw-gateway not found"
+          echo Waiting 15s for startup...
+          timeout /t 15 /nobreak >nul
+          docker ps --filter "name=openclaw-gateway" --format "{{.Names}} | {{.Status}} | {{.Ports}}"
+          docker ps --filter "name=openclaw-gateway" --format "{{.Status}}" | findstr "Up" >nul
+          if errorlevel 1 (
+            echo ERROR: openclaw-gateway not running
             docker logs openclaw-gateway --tail 30
-            exit 1
-          }
+            exit /b 1
+          )
+          echo Health check passed
 
       - name: Deployment summary
         if: always()
+        shell: cmd
         run: |
-          cd ${{ env.DEPLOY_DIR }}
-          $commit = git rev-parse --short HEAD
-          $msg = git log -1 --pretty=format:"%s"
-          $container = docker ps --filter "name=openclaw-gateway" --format "{{.Status}}"
-          Write-Host "--- Deployment Summary ---"
-          Write-Host "Commit: $commit - $msg"
-          Write-Host "Container: $container"
-          Write-Host "Ports: 18789 (gateway), 18790 (bridge)"
+          cd /d %DEPLOY_DIR%
+          echo --- Deployment Summary ---
+          git log -1 --oneline
+          docker ps --filter "name=openclaw-gateway" --format "{{.Names}} | {{.Status}}"
+          echo Ports: 18789 (gateway), 18790 (bridge)
