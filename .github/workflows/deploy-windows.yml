@@ -1,0 +1,99 @@
+name: Deploy OpenClaw to Windows (self-hosted)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/docker-release.yml'
+  workflow_dispatch:
+    inputs:
+      rebuild-image:
+        description: 'Rebuild openclaw:local Docker image from Dockerfile'
+        required: false
+        default: false
+        type: boolean
+      rebuild-custom:
+        description: 'Rebuild openclaw:ready from Dockerfile.custom (skills layer)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-windows
+  cancel-in-progress: true
+
+env:
+  DEPLOY_DIR: E:\Projects\openclaw
+
+jobs:
+  deploy:
+    name: Deploy to 192.168.2.8
+    runs-on: [self-hosted, openclaw-192-168-2-8]
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Pull latest code
+        run: |
+          cd ${{ env.DEPLOY_DIR }}
+          git fetch origin main
+          git reset --hard origin/main
+          Write-Host "Checked out commit: $(git rev-parse --short HEAD)"
+
+      - name: Rebuild openclaw:local image
+        if: github.event.inputs.rebuild-image == 'true'
+        run: |
+          cd ${{ env.DEPLOY_DIR }}
+          Write-Host "Building openclaw:local from Dockerfile..."
+          docker build -t openclaw:local -f Dockerfile .
+          Write-Host "Done. Image size:"
+          docker images openclaw:local --format "{{.Size}}"
+
+      - name: Rebuild openclaw:ready image
+        if: github.event.inputs.rebuild-custom == 'true'
+        run: |
+          cd ${{ env.DEPLOY_DIR }}
+          if (Test-Path Dockerfile.custom) {
+            Write-Host "Building openclaw:ready from Dockerfile.custom..."
+            docker build -t openclaw:ready -f Dockerfile.custom .
+            Write-Host "Done. Image size:"
+            docker images openclaw:ready --format "{{.Size}}"
+          } else {
+            Write-Host "Dockerfile.custom not found, skipping"
+          }
+
+      - name: Restart containers
+        run: |
+          cd ${{ env.DEPLOY_DIR }}
+          docker compose up -d --force-recreate openclaw-gateway
+          Write-Host "Container recreated"
+
+      - name: Health check
+        run: |
+          Write-Host "Waiting 15s for startup..."
+          Start-Sleep -Seconds 15
+          $info = docker ps --filter "name=openclaw-gateway" --format "{{.Names}}|{{.Status}}|{{.Ports}}"
+          if ($info) {
+            Write-Host "Container running: $info"
+          } else {
+            Write-Host "ERROR: openclaw-gateway not found"
+            docker logs openclaw-gateway --tail 30
+            exit 1
+          }
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          cd ${{ env.DEPLOY_DIR }}
+          $commit = git rev-parse --short HEAD
+          $msg = git log -1 --pretty=format:"%s"
+          $container = docker ps --filter "name=openclaw-gateway" --format "{{.Status}}"
+          Write-Host "--- Deployment Summary ---"
+          Write-Host "Commit: $commit - $msg"
+          Write-Host "Container: $container"
+          Write-Host "Ports: 18789 (gateway), 18790 (bridge)"
