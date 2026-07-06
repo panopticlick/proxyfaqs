@@ -10,6 +10,7 @@
 
 import type { APIRoute } from "astro";
 import { searchQuestionsWithFallback } from "../../lib/supabase";
+import { corsOptionsResponse } from "../../lib/security";
 
 export const prerender = false;
 
@@ -83,11 +84,18 @@ function cleanupRateLimits(): void {
   }
 }
 
-// Periodic cleanup
-setInterval(cleanupRateLimits, 60_000);
+// Cloudflare Workers forbid timers in the global scope, so clean up expired
+// rate-limit entries opportunistically (throttled) inside the request handler.
+let lastCleanup = 0;
 
 export const GET: APIRoute = async ({ request, url }) => {
   const clientIP = getClientIP(request);
+
+  const nowTs = Date.now();
+  if (nowTs - lastCleanup > RATE_LIMIT_WINDOW_MS) {
+    cleanupRateLimits();
+    lastCleanup = nowTs;
+  }
 
   // Rate limiting
   const rateLimit = checkRateLimit(clientIP);

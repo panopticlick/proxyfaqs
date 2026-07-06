@@ -7,6 +7,7 @@
 
 import type { APIRoute } from "astro";
 import { env } from "../../lib/env";
+import { corsOptionsResponse } from "../../lib/security";
 
 export const prerender = false;
 

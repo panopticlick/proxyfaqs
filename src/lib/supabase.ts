@@ -596,8 +596,12 @@ export async function getPopularQuestions(limit = 10): Promise<Question[]> {
  * Increment view count for a question using RPC
  * Note: This is a no-op during static generation, only works on deployed API routes
  */
-export async function incrementViewCount(questionId: string): Promise<number | null> {
+export async function incrementViewCount(
+  questionId: string,
+  runtimeEnv?: RuntimeEnv,
+): Promise<number | null> {
   try {
+    const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig(runtimeEnv);
     const url = new URL(`${supabaseUrl}/rest/v1/rpc/increment_view_count`);
     const headers: Record<string, string> = {
       apikey: supabaseAnonKey,
@@ -803,6 +807,7 @@ export async function batchGetQuestions(
   batchSize = 100
 ): Promise<Map<string, Question>> {
   const result = new Map<string, Question>();
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig();
 
   for (let i = 0; i < slugs.length; i += batchSize) {
     const batch = slugs.slice(i, i + batchSize);

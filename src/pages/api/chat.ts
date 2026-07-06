@@ -11,6 +11,7 @@
 
 import type { APIRoute } from "astro";
 import { env } from "../../lib/env";
+import { corsOptionsResponse } from "../../lib/security";
 
 export const prerender = false;
 
@@ -128,7 +129,7 @@ async function callAIProvider(
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: fetchHeaders,
+      headers,
       body: JSON.stringify({
         model,
         messages,
@@ -181,18 +182,25 @@ async function callAIProvider(
   }
 }
 
-// Cleanup rate limits periodically
-setInterval(() => {
-  const now = Date.now();
+// Cloudflare Workers forbid timers in the global scope, so clean up expired
+// rate-limit entries opportunistically (throttled) inside the request handler.
+let lastCleanup = 0;
+function cleanupRateLimits(now: number): void {
   for (const [ip, entry] of rateLimitMap.entries()) {
     if (now > entry.resetAt) {
       rateLimitMap.delete(ip);
     }
   }
-}, 60_000);
+}
 
 export const POST: APIRoute = async ({ request }) => {
   const clientIP = getClientIP(request);
+
+  const nowTs = Date.now();
+  if (nowTs - lastCleanup > RATE_LIMIT_WINDOW_MS) {
+    cleanupRateLimits(nowTs);
+    lastCleanup = nowTs;
+  }
 
   // Rate limiting
   const rateLimit = checkRateLimit(clientIP);
@@ -296,32 +304,7 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { ...JSON_HEADERS, ...rateLimitHeaders } },
     );
   } catch (error) {
-    const duration = performance.now() - start;
-    recordHistogram(Metrics.API_REQUEST_DURATION, duration, {
-      endpoint: 'chat',
-      status: 'error',
-    });
-    incrementCounter(Metrics.CHAT_ERROR_COUNT, 1, {
-      error: error instanceof Error ? error.name : 'unknown',
-    });
-
-    captureError(error, {
-      requestId,
-      endpoint: 'chat',
-    });
-
-    logger.error('Chat API error', error, {
-      requestId,
-      duration,
-    });
-
-    const responseHeaders = new Headers({
-      'Content-Type': 'application/json',
-      ...getCorsHeaders(origin),
-      'X-Request-ID': requestId,
-    });
-    addSecurityHeaders(responseHeaders);
-
+    console.error("Chat API error:", error);
     return new Response(
       JSON.stringify({
         error: "Failed to process request",

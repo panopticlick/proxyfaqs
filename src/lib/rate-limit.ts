@@ -18,18 +18,22 @@ interface RateLimitConfig {
 
 const store = new Map<string, RateLimitEntry>();
 
-// Cleanup expired entries every 5 minutes
+// Cleanup expired entries opportunistically. Cloudflare Workers forbid timers
+// in the global scope, so we prune inside checkRateLimit (throttled) instead of
+// using setInterval.
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 const ENTRY_TTL = 10 * 60 * 1000; // Keep entries for 10 minutes after expiry
+let lastCleanup = 0;
 
-setInterval(() => {
-  const now = Date.now();
+function cleanupExpired(now: number): void {
+  if (now - lastCleanup < CLEANUP_INTERVAL) return;
+  lastCleanup = now;
   for (const [key, entry] of store.entries()) {
     if (entry.resetAt + ENTRY_TTL < now) {
       store.delete(key);
     }
   }
-}, CLEANUP_INTERVAL);
+}
 
 /**
  * Extract client IP from request headers
@@ -65,6 +69,7 @@ export function checkRateLimit(
   config: RateLimitConfig
 ): { allowed: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
+  cleanupExpired(now);
   const entry = store.get(identifier);
 
   // Clean up expired entries and create new window
