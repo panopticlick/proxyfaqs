@@ -43,6 +43,7 @@ jobs:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
           SITE_URL: ${{ env.PRODUCTION_URL }}
+          ALLOW_EMPTY_BUILD_DATA: "false"
         run: bun run build
 
       - name: Deploy to Cloudflare Pages
@@ -71,6 +72,22 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ env.PRODUCTION_URL }}/api/health)
           echo "Health API: $STATUS"
           [ "$STATUS" -eq 200 ] || exit 1
+
+      - name: Search API smoke check
+        run: |
+          STATUS=$(curl -sS -o /tmp/search-api.json -w "%{http_code}" "${{ env.PRODUCTION_URL }}/api/search?q=proxy&limit=3")
+          echo "Search API: $STATUS"
+          [ "$STATUS" -eq 200 ] || exit 1
+          grep -q '"results"' /tmp/search-api.json || exit 1
+
+      - name: Content smoke check
+        run: |
+          curl -fsSL "${{ env.PRODUCTION_URL }}/q" -o /tmp/questions-page.html
+          curl -fsSL "${{ env.PRODUCTION_URL }}/category/" -o /tmp/categories-page.html
+          ! grep -q 'Browse 0 popular questions' /tmp/questions-page.html
+          ! grep -q 'No questions found\.' /tmp/questions-page.html
+          ! grep -q 'Explore 0 categories with 0+ questions' /tmp/categories-page.html
+          ! grep -q 'No categories found\.' /tmp/categories-page.html
 
       - name: SSR page check
         run: |

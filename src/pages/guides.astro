@@ -3,6 +3,7 @@ export const prerender = true;
 
 import Base from '../layouts/Base.astro';
 import { guides } from '../lib/guides';
+import { assertBuildDataNonEmpty, handleBuildDataError } from '../lib/build-data';
 import { getCategories, type Category } from '../lib/supabase';
 import { formatDate, generateCollectionPageSchema } from '../lib/utils';
 import { env } from '../lib/env';
@@ -11,8 +12,10 @@ let categories: Category[] = [];
 try {
   categories = await getCategories();
 } catch (error) {
-  console.error('Error fetching categories:', error);
+  handleBuildDataError('guides page categories fetch', error);
 }
+
+assertBuildDataNonEmpty('guides page categories', categories.length);
 
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/guides`;

@@ -3,6 +3,7 @@ export const prerender = true;
 
 import Base from '../../layouts/Base.astro';
 import ProviderCard from '../../components/ProviderCard.astro';
+import { assertBuildDataNonEmpty, handleBuildDataError } from '../../lib/build-data';
 import { getProviders, type Provider } from '../../lib/supabase';
 import { generateCollectionPageSchema } from '../../lib/utils';
 import { env } from '../../lib/env';
@@ -12,8 +13,10 @@ let providers: Provider[] = [];
 try {
   providers = await getProviders();
 } catch (error) {
-  console.error('Error fetching providers:', error);
+  handleBuildDataError('providers index data fetch', error);
 }
+
+assertBuildDataNonEmpty('providers index providers', providers.length);
 
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/providers`;

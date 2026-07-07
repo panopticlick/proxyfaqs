@@ -16,6 +16,7 @@ import Base from '../layouts/Base.astro';
 import SearchBox from '../components/SearchBox.astro';
 import QuestionCard from '../components/QuestionCard.astro';
 import ProviderCard from '../components/ProviderCard.astro';
+import { assertBuildDataNonEmpty, handleBuildDataError } from '../lib/build-data';
 import { getCategories, getPopularQuestions, getProviders, getStats } from '../lib/supabase';
 import { env } from '../lib/env';
 
@@ -34,8 +35,12 @@ try {
   ]);
   featuredProviders = featuredProviders.slice(0, 4);
 } catch (error) {
-  console.error('Error fetching homepage data:', error);
+  handleBuildDataError('homepage data fetch', error);
 }
+
+assertBuildDataNonEmpty('homepage categories', categories.length);
+assertBuildDataNonEmpty('homepage popular questions', popularQuestions.length);
+assertBuildDataNonEmpty('homepage providers', featuredProviders.length);
 
 const fallbackStats = {
   totalQuestions: 2807,

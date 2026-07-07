@@ -10,13 +10,13 @@
  */
 
 import type { APIRoute } from "astro";
-import { env } from "../../lib/env";
 import { corsOptionsResponse } from "../../lib/security";
 
 export const prerender = false;
 
 // Configuration
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const VECTORENGINE_BASE_URL = "https://api.vectorengine.ai";
 const MAX_MESSAGE_LENGTH = 1000;
 const CHAT_TIMEOUT_MS = 20000;
 const MAX_RETRIES = 2;
@@ -27,15 +27,29 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-// API key rotation
-const openRouterKeys = env.OPENROUTER_API_KEY
-  ? env.OPENROUTER_API_KEY.split(",").map((k) => k.trim()).filter(Boolean)
-  : [];
+type RuntimeEnv = Record<string, unknown>;
 let currentKeyIndex = 0;
 
-function getNextOpenRouterKey(): string | null {
+function getRuntimeString(runtimeEnv: RuntimeEnv | undefined, key: string, fallback = ""): string {
+  const value = runtimeEnv?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function getOpenRouterKeys(runtimeEnv: RuntimeEnv | undefined): string[] {
+  const value = getRuntimeString(runtimeEnv, "OPENROUTER_API_KEY");
+  return value ? value.split(",").map((k) => k.trim()).filter(Boolean) : [];
+}
+
+function getOpenRouterModels(runtimeEnv: RuntimeEnv | undefined): string[] {
+  const primary = getRuntimeString(runtimeEnv, "OPENROUTER_MODEL", "google/gemini-2.5-flash-lite");
+  const fallbacks = getRuntimeString(runtimeEnv, "OPENROUTER_FALLBACK_MODELS");
+  return [primary, ...fallbacks.split(",").map((model) => model.trim())]
+    .filter((model, index, all) => model && all.indexOf(model) === index);
+}
+
+function getNextOpenRouterKey(openRouterKeys: string[]): string | null {
   if (openRouterKeys.length === 0) return null;
-  const key = openRouterKeys[currentKeyIndex];
+  const key = openRouterKeys[currentKeyIndex % openRouterKeys.length];
   currentKeyIndex = (currentKeyIndex + 1) % openRouterKeys.length;
   return key;
 }
@@ -95,11 +109,14 @@ function sanitizeMessage(message: string): string {
 async function callAIProvider(
   messages: Array<{ role: string; content: string }>,
   provider: "openrouter" | "vectorengine",
-  retryCount = 0
-): Promise<{ success: boolean; response?: string; error?: string }> {
+  runtimeEnv: RuntimeEnv | undefined,
+  retryCount = 0,
+  modelOverride?: string,
+): Promise<{ success: boolean; response?: string; error?: string; statusCode?: number }> {
+  const openRouterKeys = getOpenRouterKeys(runtimeEnv);
   const apiKey = provider === "openrouter"
-    ? getNextOpenRouterKey()
-    : env.VECTORENGINE_API_KEY;
+    ? getNextOpenRouterKey(openRouterKeys)
+    : getRuntimeString(runtimeEnv, "VECTORENGINE_API_KEY");
 
   if (!apiKey) {
     return { success: false, error: "No API key available" };
@@ -107,10 +124,10 @@ async function callAIProvider(
 
   const apiUrl = provider === "openrouter"
     ? `${OPENROUTER_BASE_URL}/chat/completions`
-    : `${env.VECTORENGINE_BASE_URL}/v1/chat/completions`;
+    : `${getRuntimeString(runtimeEnv, "VECTORENGINE_BASE_URL", VECTORENGINE_BASE_URL)}/v1/chat/completions`;
 
   const model = provider === "openrouter"
-    ? env.OPENROUTER_MODEL
+    ? (modelOverride || getRuntimeString(runtimeEnv, "OPENROUTER_MODEL", "google/gemini-2.5-flash-lite"))
     : "grok-4-fast-non-reasoning";
 
   const headers: Record<string, string> = {
@@ -148,10 +165,10 @@ async function callAIProvider(
       // Retry with backoff for transient errors
       if (retryCount < MAX_RETRIES && (response.status >= 500 || response.status === 429)) {
         await new Promise((r) => setTimeout(r, Math.pow(2, retryCount) * 1000));
-        return callAIProvider(messages, provider, retryCount + 1);
+        return callAIProvider(messages, provider, runtimeEnv, retryCount + 1, modelOverride);
       }
 
-      return { success: false, error: `API returned ${response.status}` };
+      return { success: false, error: `API returned ${response.status}`, statusCode: response.status };
     }
 
     const data = await response.json();
@@ -175,11 +192,39 @@ async function callAIProvider(
     // Retry for network errors
     if (retryCount < MAX_RETRIES) {
       await new Promise((r) => setTimeout(r, Math.pow(2, retryCount) * 1000));
-      return callAIProvider(messages, provider, retryCount + 1);
+      return callAIProvider(messages, provider, runtimeEnv, retryCount + 1, modelOverride);
     }
 
     return { success: false, error: err.message };
   }
+}
+
+async function callOpenRouterFallback(
+  messages: Array<{ role: string; content: string }>,
+  runtimeEnv: RuntimeEnv | undefined,
+): Promise<{ success: boolean; response?: string; error?: string; statusCode?: number }> {
+  const openRouterModels = getOpenRouterModels(runtimeEnv);
+  let lastResult: { success: boolean; response?: string; error?: string; statusCode?: number } = {
+    success: false,
+    error: "No OpenRouter model configured",
+  };
+
+  for (const model of openRouterModels) {
+    const result = await callAIProvider(messages, "openrouter", runtimeEnv, 0, model);
+    if (result.success) {
+      return result;
+    }
+
+    lastResult = result;
+
+    // 429s and 5xxs are the most common transient provider/model failures.
+    // Try the next configured model before falling back to another provider.
+    if (result.statusCode && result.statusCode !== 429 && result.statusCode < 500) {
+      break;
+    }
+  }
+
+  return lastResult;
 }
 
 // Cloudflare Workers forbid timers in the global scope, so clean up expired
@@ -193,7 +238,8 @@ function cleanupRateLimits(now: number): void {
   }
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const runtimeEnv = (locals as { runtime?: { env?: RuntimeEnv } })?.runtime?.env;
   const clientIP = getClientIP(request);
 
   const nowTs = Date.now();
@@ -248,8 +294,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Check for available providers
-    const hasOpenRouter = openRouterKeys.length > 0;
-    const hasVectorEngine = !!env.VECTORENGINE_API_KEY;
+    const hasOpenRouter = getOpenRouterKeys(runtimeEnv).length > 0;
+    const hasVectorEngine = !!getRuntimeString(runtimeEnv, "VECTORENGINE_API_KEY");
 
     if (!hasOpenRouter && !hasVectorEngine) {
       return new Response(
@@ -280,12 +326,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Try OpenRouter first, then VectorEngine
     let result = hasOpenRouter
-      ? await callAIProvider(messages, "openrouter")
+      ? await callOpenRouterFallback(messages, runtimeEnv)
       : { success: false, error: "No OpenRouter key" };
 
     if (!result.success && hasVectorEngine) {
       console.log("Falling back to VectorEngine");
-      result = await callAIProvider(messages, "vectorengine");
+      result = await callAIProvider(messages, "vectorengine", runtimeEnv);
     }
 
     if (result.success && result.response) {

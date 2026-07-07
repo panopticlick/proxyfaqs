@@ -116,6 +116,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ci-placeholder-key
           SITE_URL: https://proxyfaqs.com
           PUBLIC_SITE_URL: https://proxyfaqs.com
+          ALLOW_EMPTY_BUILD_DATA: "true"
         run: bun run build
 
       - name: Check build output

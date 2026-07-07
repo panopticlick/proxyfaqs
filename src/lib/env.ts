@@ -67,6 +67,7 @@ const envSchema = z
     SITEMAP_QUESTION_LIMIT: z.coerce.number().int().positive().default(50000),
     BUILD_CHUNK_SIZE: z.coerce.number().int().positive().default(5000),
     BUILD_PARALLEL: z.union([z.string(), z.boolean()]).default("true").transform((v) => v === "true" || v === true),
+    ALLOW_EMPTY_BUILD_DATA: z.union([z.string(), z.boolean()]).default("false").transform((v) => v === "true" || v === true),
 
     // CORS
     ALLOWED_ORIGINS: z.string().default("https://proxyfaqs.com,https://www.proxyfaqs.com"),
