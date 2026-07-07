@@ -7,6 +7,3 @@ https://www.proxyfaqs.com/* https://proxyfaqs.com/:splat
 
 # API health check
 /health /api/health 200
-
-# Preserve method/body for API callers that omit the trailing slash
-/api/view /api/view/ 307
