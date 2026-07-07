@@ -1,0 +1,57 @@
+{
+  "updated_at": "2026-07-07T07:53:56Z",
+  "project": "proxyfaqs",
+  "production_url": "https://proxyfaqs.com",
+  "platform": "cloudflare_pages",
+  "cloudflare_project": "proxyfaqs",
+  "runtime_host": "openclaw",
+  "runtime_workspace": "/Users/openclaw/test-workspace/proxyfaqs",
+  "latest_manual_deploy": {
+    "method": "wrangler_pages_deploy_via_openclaw",
+    "preview_url": "https://980e6ef3.proxyfaqs-909.pages.dev",
+    "verified_on_production": true
+  },
+  "checks": {
+    "homepage": {
+      "status": 200,
+      "question_links": 8,
+      "category_links": 12,
+      "provider_links": 4
+    },
+    "questions_index": {
+      "status": 200,
+      "popular_questions": 50
+    },
+    "category_index": {
+      "status": 200,
+      "categories": 10,
+      "questions": 2807
+    },
+    "providers_index": {
+      "status": 200,
+      "provider_links": 5
+    },
+    "api_health": {
+      "status": 200,
+      "database_status": "ok"
+    },
+    "api_search": {
+      "status": 200,
+      "sample_result_count": 3
+    },
+    "api_chat": {
+      "status": 200,
+      "response_mode": "live_answer"
+    },
+    "api_view": {
+      "status_canonical": 200,
+      "status_no_slash": 307,
+      "canonical_path": "/api/view/"
+    }
+  },
+  "notes": [
+    "Critical static data pages are now build-gated against empty production data.",
+    "Chat runtime reads Cloudflare runtime env instead of build-baked AI config.",
+    "local.env.txt is notes-only and should not be treated as machine-readable runtime env."
+  ]
+}
