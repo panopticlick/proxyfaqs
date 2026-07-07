@@ -1,12 +1,13 @@
 # ProxyFAQs Project State
 
-Last updated: 2026-07-07 15:53 +0800
+Last updated: 2026-07-07 16:02 +0800
 
 ## Production Truth
 
 - Public site: `https://proxyfaqs.com`
 - Platform: Cloudflare Pages
 - Pages project: `proxyfaqs`
+- Latest verified manual production override: `https://f32ce37f.proxyfaqs-909.pages.dev`
 - Controlled runtime/build host: OpenClaw
 - OpenClaw workspace: `/Users/openclaw/test-workspace/proxyfaqs`
 - Canonical manual deploy path: build on OpenClaw, then `wrangler pages deploy dist --project-name proxyfaqs --branch main --commit-dirty=true`
@@ -23,7 +24,6 @@ Verified on 2026-07-07 against the live production domain:
 - `GET /api/search?q=proxy&limit=3` returns `200` with real results
 - `POST /api/chat` returns `200` with a live model answer, not the fallback apology response
 - `POST /api/view/` returns `200`
-- `POST /api/view` returns `307` to `/api/view/` so callers that omit the trailing slash still preserve method and body
 
 ## Current Runtime Notes
 
@@ -42,12 +42,14 @@ Verified on 2026-07-07 against the live production domain:
 - `local.env.txt` in this repo is operator-authored notes, not a machine-readable env file.
 - The actual project runtime values used during this recovery came from the existing project `.env` plus Cloudflare Pages secrets.
 - `PROJECT_STATE.md`, `ops/current-state.json`, and `ops/deploy-ledger.jsonl` are the current runbook truth for future production checks.
+- The canonical write endpoint for question view tracking is `POST /api/view/`.
 
 ## Remaining Repo State
 
-- Current local repair commits:
+- Repair commit line:
   - `35598fa fix: restore workers API endpoints`
   - `d8df43f fix: restore production data and runtime chat`
+  - `d54b722 docs: record production state and normalize view API`
 - Pre-existing worktree drift intentionally left untouched:
   - `D QUICK_DEPLOY.md`
   - `?? _archive/`

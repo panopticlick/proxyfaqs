@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-07T07:53:56Z",
+  "updated_at": "2026-07-07T08:02:42Z",
   "project": "proxyfaqs",
   "production_url": "https://proxyfaqs.com",
   "platform": "cloudflare_pages",
@@ -8,7 +8,7 @@
   "runtime_workspace": "/Users/openclaw/test-workspace/proxyfaqs",
   "latest_manual_deploy": {
     "method": "wrangler_pages_deploy_via_openclaw",
-    "preview_url": "https://980e6ef3.proxyfaqs-909.pages.dev",
+    "preview_url": "https://f32ce37f.proxyfaqs-909.pages.dev",
     "verified_on_production": true
   },
   "checks": {
@@ -45,13 +45,13 @@
     },
     "api_view": {
       "status_canonical": 200,
-      "status_no_slash": 307,
       "canonical_path": "/api/view/"
     }
   },
   "notes": [
     "Critical static data pages are now build-gated against empty production data.",
     "Chat runtime reads Cloudflare runtime env instead of build-baked AI config.",
-    "local.env.txt is notes-only and should not be treated as machine-readable runtime env."
+    "local.env.txt is notes-only and should not be treated as machine-readable runtime env.",
+    "The canonical question view tracking write path is POST /api/view/."
   ]
 }
