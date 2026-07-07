@@ -1,0 +1,95 @@
+name: Deploy OpenClaw to Windows (self-hosted)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/docker-release.yml'
+  workflow_dispatch:
+    inputs:
+      rebuild-image:
+        description: 'Rebuild openclaw:local Docker image from Dockerfile'
+        required: false
+        default: false
+        type: boolean
+      rebuild-custom:
+        description: 'Rebuild openclaw:ready from Dockerfile.custom (skills layer)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-windows
+  cancel-in-progress: true
+
+env:
+  DEPLOY_DIR: E:\Projects\openclaw
+
+jobs:
+  deploy:
+    name: Deploy to 192.168.2.8
+    runs-on: [self-hosted, openclaw-192-168-2-8]
+    timeout-minutes: 30
+
+    steps:
+      - name: Pull latest code
+        shell: cmd
+        run: |
+          cd /d %DEPLOY_DIR%
+          git fetch origin main
+          git reset --hard origin/main
+          git rev-parse --short HEAD
+
+      - name: Rebuild openclaw:local image
+        if: github.event.inputs.rebuild-image == 'true'
+        shell: cmd
+        run: |
+          cd /d %DEPLOY_DIR%
+          echo Building openclaw:local from Dockerfile...
+          docker build -t openclaw:local -f Dockerfile .
+
+      - name: Rebuild openclaw:ready image
+        if: github.event.inputs.rebuild-custom == 'true'
+        shell: cmd
+        run: |
+          cd /d %DEPLOY_DIR%
+          if exist Dockerfile.custom (
+            echo Building openclaw:ready from Dockerfile.custom...
+            docker build -t openclaw:ready -f Dockerfile.custom .
+          ) else (
+            echo Dockerfile.custom not found, skipping
+          )
+
+      - name: Restart containers
+        shell: cmd
+        run: |
+          cd /d %DEPLOY_DIR%
+          docker compose up -d --force-recreate openclaw-gateway
+          echo Container recreated
+
+      - name: Health check
+        shell: cmd
+        run: |
+          echo Waiting 15s for startup...
+          timeout /t 15 /nobreak >nul
+          docker ps --filter "name=openclaw-gateway" --format "{{.Names}} | {{.Status}} | {{.Ports}}"
+          docker ps --filter "name=openclaw-gateway" --format "{{.Status}}" | findstr "Up" >nul
+          if errorlevel 1 (
+            echo ERROR: openclaw-gateway not running
+            docker logs openclaw-gateway --tail 30
+            exit /b 1
+          )
+          echo Health check passed
+
+      - name: Deployment summary
+        if: always()
+        shell: cmd
+        run: |
+          cd /d %DEPLOY_DIR%
+          echo --- Deployment Summary ---
+          git log -1 --oneline
+          docker ps --filter "name=openclaw-gateway" --format "{{.Names}} | {{.Status}}"
+          echo Ports: 18789 (gateway), 18790 (bridge)
