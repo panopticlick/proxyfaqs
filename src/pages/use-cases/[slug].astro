@@ -75,6 +75,12 @@ const faqItems = [
   },
 ];
 
+const setupSteps = [
+  `Pick a ${proxyType} proxy pool that matches your target geography.`,
+  'Configure rotation rules and sticky sessions for login workflows.',
+  'Throttle requests and monitor block rates with retry backoff.',
+];
+
 const jsonLd = [
   generateBreadcrumbSchema([
     { name: 'Home', url: siteUrl },
@@ -92,11 +98,7 @@ const jsonLd = [
   generateHowToSchema({
     name: `How to set up proxies for ${page.keyword}`,
     description: `Quick setup steps for ${page.keyword}`,
-    steps: [
-      `Pick a ${proxyType} proxy pool that matches your target geography.`,
-      'Configure rotation rules and sticky sessions for login workflows.',
-      'Throttle requests and monitor block rates with retry backoff.',
-    ],
+    steps: setupSteps,
   }),
 ];
 ---
@@ -147,6 +149,25 @@ const jsonLd = [
                 >{page.keyword}</strong
               >. We cover proxy recommendations, setup steps, and troubleshooting tips.
             </p>
+
+            <div class="grid gap-4 md:grid-cols-[1fr,1.2fr] mb-6">
+              <div class="rounded-xl border border-primary-200 bg-primary-50 p-5">
+                <p class="text-xs uppercase tracking-wide text-primary-700 font-semibold mb-2">Recommended starting setup</p>
+                <p class="text-2xl font-bold text-secondary-900 capitalize">{proxyType} proxies</p>
+                <p class="text-sm text-secondary-600 mt-2">{useCaseInsight.providerRationale}</p>
+              </div>
+              <div class="rounded-xl border border-secondary-200 bg-secondary-50 p-5">
+                <p class="text-xs uppercase tracking-wide text-secondary-500 font-semibold mb-3">Do this first</p>
+                <ol class="space-y-2 text-sm text-secondary-700">
+                  {setupSteps.map((step, index) => (
+                    <li class="flex gap-2">
+                      <span class="font-semibold text-primary-600">{index + 1}.</span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
 
             {
               page.tags.length > 0 && (
@@ -218,11 +239,10 @@ const jsonLd = [
           </div>
 
           <div class="card">
-            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Quick setup checklist</h2>
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Setup checklist details</h2>
             <ol class="list-decimal list-inside text-secondary-600 space-y-2">
-              <li>Choose a {proxyType} proxy pool with the target geography you need.</li>
-              <li>Configure rotation rules and session length in your proxy manager.</li>
-              <li>Throttle requests, randomize headers, and validate responses.</li>
+              {setupSteps.map((step) => <li>{step}</li>)}
+              <li>Validate usable responses before increasing concurrency or spend.</li>
             </ol>
           </div>
 

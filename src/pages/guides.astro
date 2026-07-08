@@ -2,6 +2,7 @@
 export const prerender = true;
 
 import Base from '../layouts/Base.astro';
+import SearchBox from '../components/SearchBox.astro';
 import { guides } from '../lib/guides';
 import { assertBuildDataNonEmpty, handleBuildDataError } from '../lib/build-data';
 import { getCategories, type Category } from '../lib/supabase';
@@ -33,26 +34,30 @@ const jsonLd = generateCollectionPageSchema({
 ---
 
 <Base
-  title="Proxy Guides"
-  description="Practical guides to proxies, web scraping, and data collection. Learn faster, avoid blocks, and pick the right proxy type."
+  title="Proxy Guide Finder"
+  description="Find the right proxy guide for a task, proxy type, provider decision, or troubleshooting problem. Search first, then browse the guide library."
   canonicalUrl={pageUrl}
   jsonLd={jsonLd}
 >
   <section class="bg-gradient-to-b from-primary-50 to-white py-16 md:py-20">
     <div class="container-custom text-center">
+      <p class="badge-primary mx-auto w-fit mb-4">Proxy Guide Finder</p>
       <h1 class="text-4xl md:text-5xl font-bold text-secondary-900 mb-4">
-        Proxy Guides
+        Pick the right proxy guide for the job
       </h1>
-      <p class="text-lg text-secondary-600 max-w-3xl mx-auto">
-        Learn the core playbooks for proxies and scraping. Clear steps, practical checklists, and battle-tested recommendations.
+      <p class="text-lg text-secondary-600 max-w-3xl mx-auto mb-6">
+        Search the answer archive by proxy type, provider decision, scraping workflow, or troubleshooting issue. The guide cards below are the structured follow-up paths.
       </p>
+      <div class="max-w-2xl mx-auto">
+        <SearchBox size="lg" placeholder="Search proxy answers about providers, errors, or scraping workflows..." />
+      </div>
     </div>
   </section>
 
   <section class="py-12 bg-white">
     <div class="container-custom">
       <div class="flex items-center justify-between mb-8">
-        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900">Featured Guides</h2>
+        <h2 class="text-2xl md:text-3xl font-bold text-secondary-900">Browse guide paths</h2>
         <span class="text-sm text-secondary-500">{guides.length} guides</span>
       </div>
 
@@ -143,7 +148,7 @@ const jsonLd = generateCollectionPageSchema({
           </div>
           <div class="flex flex-wrap gap-3">
             <a href="/search" class="btn-primary">
-              Search Questions
+              Search Answers
             </a>
             <a href="/providers" class="btn-secondary">
               Compare Providers

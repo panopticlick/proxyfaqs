@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import SearchBox from '../../components/SearchBox.astro';
 import { getProxyClusters, getProxyClusterTopics } from '../../lib/pseo';
 
 const pages = [...getProxyClusters()].sort((a, b) => (b.volume || 0) - (a.volume || 0));
@@ -22,18 +23,20 @@ const jsonLd = {
 ---
 
 <Base
-  title="Proxy Use Cases | ProxyFAQs"
-  description="Browse proxy use cases and long-tail questions to find the right proxy setup for your target."
+  title="Proxy Use Case Finder | ProxyFAQs"
+  description="Find the right proxy setup for a target, task, or scraping workflow. Search first, then browse proxy use cases by topic and demand."
   jsonLd={jsonLd}
 >
   <section class="bg-gradient-to-b from-primary-50 via-white to-white py-16">
     <div class="container-custom text-center">
-      <p class="badge-primary mx-auto w-fit mb-4">Use Cases</p>
-      <h1 class="text-4xl md:text-5xl font-bold text-secondary-900 mb-4">Proxy Use Cases</h1>
-      <p class="text-lg text-secondary-600 max-w-3xl mx-auto">
-        Explore keyword-driven pages built from real search demand. Each page includes proxy
-        recommendations, quick checklists, and internal links to related questions.
+      <p class="badge-primary mx-auto w-fit mb-4">Proxy Use Case Finder</p>
+      <h1 class="text-4xl md:text-5xl font-bold text-secondary-900 mb-4">Find the right proxy setup for a target</h1>
+      <p class="text-lg text-secondary-600 max-w-3xl mx-auto mb-6">
+        Search the answer archive for a site, task, or scraping workflow first. Use the use-case grid below when you want a structured setup page by target.
       </p>
+      <div class="max-w-2xl mx-auto">
+        <SearchBox size="lg" autofocus={false} placeholder="Search proxy answers about targets, proxy types, or scraping tasks..." />
+      </div>
     </div>
   </section>
 
@@ -91,7 +94,7 @@ const jsonLd = {
               Use search to find relevant answers or ask our AI assistant for a tailored proxy plan.
             </p>
             <div class="flex flex-wrap gap-3">
-              <a href="/search" class="btn-primary">Search Questions</a>
+              <a href="/search" class="btn-primary">Search Answers</a>
               <a href="/providers" class="btn-secondary">Compare Providers</a>
             </div>
           </div>

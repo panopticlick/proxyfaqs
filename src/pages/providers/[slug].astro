@@ -165,7 +165,7 @@ const websiteHostname = provider.website_url
 ---
 
 <Base
-  title={`${displayName} Review`}
+  title={`${displayName} Review and Fit Check`}
   description={pageDescription}
   canonicalUrl={pageUrl}
   noindex={shouldNoindex}
@@ -239,7 +239,7 @@ const websiteHostname = provider.website_url
                 </div>
 
                 <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-2">
-                  {displayName} Review
+                  {displayName} review and fit check
                 </h1>
 
                 {
@@ -277,6 +277,18 @@ const websiteHostname = provider.website_url
                 }
 
                 <p class="text-secondary-600">{pageDescription}</p>
+
+                <div class="mt-5 grid gap-3 sm:grid-cols-3 text-sm">
+                  <a href="#fit" class="rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 font-medium text-primary-700 hover:border-primary-300">
+                    Check fit
+                  </a>
+                  <a href="#verify" class="rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2 font-medium text-secondary-700 hover:border-primary-300 hover:text-primary-700">
+                    Verify risks
+                  </a>
+                  <a href="#compare" class="rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2 font-medium text-secondary-700 hover:border-primary-300 hover:text-primary-700">
+                    Compare next
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -322,7 +334,7 @@ const websiteHostname = provider.website_url
               <>
                 <div class="grid md:grid-cols-2 gap-6 mb-8">
                   <div class="card">
-                    <h2 class="text-xl font-semibold text-secondary-900 mb-4">Where this provider fits</h2>
+                    <h2 id="fit" class="text-xl font-semibold text-secondary-900 mb-4">Where this provider fits</h2>
                     <ul class="space-y-3 text-secondary-700">
                       {editorial.bestFor.map((item) => (
                         <li class="flex items-start gap-2">
@@ -334,7 +346,7 @@ const websiteHostname = provider.website_url
                   </div>
 
                   <div class="card">
-                    <h2 class="text-xl font-semibold text-secondary-900 mb-4">What to verify before buying</h2>
+                    <h2 id="verify" class="text-xl font-semibold text-secondary-900 mb-4">What to verify before buying</h2>
                     <ul class="space-y-3 text-secondary-700">
                       {editorial.watchouts.map((item) => (
                         <li class="flex items-start gap-2">
@@ -479,7 +491,7 @@ const websiteHostname = provider.website_url
           }
 
           <div class="card mb-8">
-            <h2 class="text-xl font-semibold text-secondary-900 mb-4">Continue comparing</h2>
+            <h2 id="compare" class="text-xl font-semibold text-secondary-900 mb-4">Continue comparing</h2>
             <div class="grid sm:grid-cols-2 gap-3 text-sm">
               <a
                 href="/guides/provider-comparison"

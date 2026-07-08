@@ -2,6 +2,7 @@
 export const prerender = true;
 
 import Base from '../../layouts/Base.astro';
+import SearchBox from '../../components/SearchBox.astro';
 import QuestionCard from '../../components/QuestionCard.astro';
 import { getCategory, getQuestionsByCategory, getAllCategorySlugs, getCategories, type Category, type Question } from '../../lib/supabase';
 import { generateBreadcrumbSchema, generateCollectionPageSchema } from '../../lib/utils';
@@ -62,9 +63,9 @@ const jsonLd = [
 ---
 
 <Base
-  title={`${category.name} Questions`}
+  title={`${category.name} Question Finder`}
   description={category.description ||
-    `Browse ${category.question_count || 0} questions about ${category.name}. Find expert answers about proxies and web scraping.`}
+    `Search and browse ${category.question_count || 0} questions about ${category.name}. Start with the finder, then use the answer list for proxy and web scraping troubleshooting.`}
   canonicalUrl={pageUrl}
   jsonLd={jsonLd}
 >
@@ -101,7 +102,8 @@ const jsonLd = [
           </ol>
         </nav>
 
-        <div class="flex items-start gap-4">
+        <div class="grid gap-6 lg:grid-cols-[1fr,minmax(320px,520px)] lg:items-center">
+          <div class="flex items-start gap-4">
           <div
             class="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center"
           >
@@ -120,13 +122,23 @@ const jsonLd = [
             </svg>
           </div>
           <div>
+            <p class="badge-primary w-fit mb-3">Category answer finder</p>
             <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-2">
-              {category.name}
+              {category.name} questions
             </h1>
             {category.description && <p class="text-secondary-600 mb-2">{category.description}</p>}
             <p class="text-sm text-secondary-500">
-              {(category.question_count || 0).toLocaleString()} questions
+              {(category.question_count || 0).toLocaleString()} questions in this topic
             </p>
+          </div>
+          </div>
+
+          <div class="card bg-secondary-50 border border-secondary-100">
+            <h2 class="font-semibold text-secondary-900 mb-2">Start with this topic</h2>
+            <p class="text-sm text-secondary-600 mb-4">
+              Search the exact issue or task, then scan this category if the query is too narrow.
+            </p>
+            <SearchBox size="md" placeholder={`Search ${category.name.toLowerCase()} issues, errors, or setups...`} />
           </div>
         </div>
       </div>
@@ -163,6 +175,13 @@ const jsonLd = [
 
           <!-- Questions -->
           <main class="lg:col-span-3 order-1 lg:order-2">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-secondary-900 mb-2">Best matching answers</h2>
+              <p class="text-secondary-600">
+                These are the indexed Q&A pages for this one topic. The content is here to support the answer-finding task, not to replace it.
+              </p>
+            </div>
+
             <div class="grid gap-4">
               {
                 questions.map((question) => (

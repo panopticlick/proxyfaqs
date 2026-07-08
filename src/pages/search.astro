@@ -18,14 +18,14 @@ try {
 
 assertBuildDataNonEmpty('search page popular questions', popularQuestions.length);
 
-const title = 'Search';
+const title = 'Proxy Search Tool';
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/search`;
 ---
 
 <Base
   title={title}
-  description='Search our knowledge base of proxy and web scraping questions'
+  description='Search the ProxyFAQs knowledge base for proxy, provider, scraping, and troubleshooting answers.'
   canonicalUrl={pageUrl}
   noindex={true}
 >
@@ -34,10 +34,10 @@ const pageUrl = `${siteUrl}/search`;
     <section class="bg-white border-b border-secondary-200 py-8">
       <div class="container-custom">
         <h1 id="search-heading" class="text-2xl md:text-3xl font-bold text-secondary-900 mb-6">
-          Search Questions
+          Search proxy answers
         </h1>
         <div class="max-w-2xl">
-          <SearchBox size="md" autofocus />
+          <SearchBox size="md" autofocus placeholder="Search proxy questions, providers, errors, or scraping setups..." />
         </div>
       </div>
     </section>
@@ -81,7 +81,7 @@ const pageUrl = `${siteUrl}/search`;
         </div>
 
         <div id="search-popular">
-          <h2 class="text-xl font-semibold text-secondary-900 mb-6">Popular Questions</h2>
+          <h2 class="text-xl font-semibold text-secondary-900 mb-6">Popular answer paths</h2>
           <div class="grid gap-4 md:grid-cols-2">
             {popularQuestions.map((question) => <QuestionCard question={question} />)}
           </div>
@@ -209,7 +209,7 @@ const pageUrl = `${siteUrl}/search`;
         resultsContainer?.classList.add('hidden');
         emptyState?.classList.add('hidden');
         popularContainer?.classList.remove('hidden');
-        if (heading) heading.textContent = 'Search Questions';
+        if (heading) heading.textContent = 'Search proxy answers';
         document.title = 'Search | ProxyFAQs';
         return;
       }

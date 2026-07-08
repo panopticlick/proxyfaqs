@@ -105,10 +105,10 @@ const jsonLd = [
 ---
 
 <Base
-  title="ProxyFAQs - The Stack Overflow for Proxies"
-  description={`Find answers to ${questionCountLabel}+ questions about proxies, web scraping, and data extraction. Browse research-backed provider profiles and get practical AI guidance.`}
+  title="Proxy Answer Finder and Provider Research"
+  description={`Search ${questionCountLabel}+ proxy and web scraping answers, compare provider profiles, and choose the right proxy setup by task.`}
   jsonLd={jsonLd}
-  keywords="proxy, proxies, web scraping, residential proxy, datacenter proxy, rotating proxy, proxy provider, scraping tools, anti-detection, proxy comparison"
+  keywords="proxy answer finder, proxy questions, web scraping answers, residential proxy, datacenter proxy, rotating proxy, proxy provider comparison"
 >
   <!-- Hero Section -->
   <section class="relative bg-gradient-to-b from-primary-50 via-white to-white py-16 md:py-24" aria-labelledby="hero-title">
@@ -118,24 +118,22 @@ const jsonLd = [
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
           <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
         </svg>
-        Vendor-Neutral Knowledge Base
+Proxy Answer Finder
       </div>
 
       <!-- Headline -->
       <h1 id="hero-title" class="text-4xl md:text-5xl lg:text-6xl font-bold text-secondary-900 mb-6 leading-tight">
-        The <span class="text-gradient">Stack Overflow</span><br class="hidden sm:block" />for Proxies
+        Find the right <span class="text-gradient">proxy answer</span><br class="hidden sm:block" />before you buy or scrape
       </h1>
 
       <!-- Subheadline -->
       <p class="text-lg md:text-xl text-secondary-600 max-w-2xl mx-auto mb-8">
-        Find answers to your proxy and web scraping questions from our knowledge base of
-        <span class="font-semibold text-secondary-900">{questionCountLabel}+</span> Q&A pairs.
-        Compare providers. Get AI-powered help.
+        Search one concrete proxy question, provider decision, or scraping setup first. The browse sections below support the tool; they are not the main task.
       </p>
 
       <!-- Search Box -->
       <div class="max-w-2xl mx-auto mb-8">
-        <SearchBox size="lg" autofocus showPopular={true} />
+        <SearchBox size="lg" autofocus showPopular={true} placeholder="Ask about a proxy type, provider, scraping block, or setup..." />
       </div>
 
       <!-- Quick Stats -->
@@ -228,7 +226,7 @@ const jsonLd = [
         </a>
 
         <a href="/providers" class="card-hover flex flex-col">
-          <p class="badge-secondary w-fit mb-3">Provider Reviews</p>
+          <p class="badge-secondary w-fit mb-3">Provider Fit</p>
           <h3 class="text-xl font-semibold text-secondary-900 mb-3">Which vendor fits the workload?</h3>
           <p class="text-secondary-600 mb-4 flex-1">
             Browse provider profiles with best-fit notes, watchouts, and dated research instead of
@@ -250,11 +248,11 @@ const jsonLd = [
     </div>
   </section>
 
-  <!-- Popular Questions Section -->
+  <!-- Popular Answer Paths Section -->
   <section class="py-16 bg-secondary-50" aria-labelledby="popular-title">
     <div class="container-custom">
       <div class="flex justify-between items-center mb-8">
-        <h2 id="popular-title" class="text-2xl md:text-3xl font-bold text-secondary-900">Popular Questions</h2>
+        <h2 id="popular-title" class="text-2xl md:text-3xl font-bold text-secondary-900">Popular answer paths</h2>
         <a href="/q" class="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
           View all
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

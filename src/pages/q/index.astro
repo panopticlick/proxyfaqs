@@ -2,6 +2,7 @@
 export const prerender = true;
 
 import Base from '../../layouts/Base.astro';
+import SearchBox from '../../components/SearchBox.astro';
 import QuestionCard from '../../components/QuestionCard.astro';
 import { assertBuildDataNonEmpty, handleBuildDataError } from '../../lib/build-data';
 import { getPopularQuestions, getCategories } from '../../lib/supabase';
@@ -24,20 +25,32 @@ const pageUrl = `${siteUrl}/q`;
 ---
 
 <Base
-  title="Popular Questions"
-  description="Browse popular proxy and web scraping questions. Find expert answers about residential proxies, datacenter proxies, scraping techniques, and more."
+  title="Proxy Question Finder"
+  description="Search practical proxy and web scraping answers, then browse popular questions by topic. Start with the search tool before reading the full Q&A archive."
   canonicalUrl={pageUrl}
 >
   <div class="bg-secondary-50 min-h-screen">
-    <!-- Header -->
-    <section class="bg-white border-b border-secondary-200 py-8">
+    <!-- Tool-first Header -->
+    <section class="bg-gradient-to-b from-primary-50 to-white border-b border-secondary-200 py-10 md:py-14">
       <div class="container-custom">
-        <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
-          Popular Questions
-        </h1>
-        <p class="text-secondary-600">
-          Browse {questions.length.toLocaleString()} popular questions about proxies and web scraping
-        </p>
+        <div class="max-w-3xl">
+          <p class="badge-primary w-fit mb-4">Proxy Question Finder</p>
+          <h1 class="text-3xl md:text-4xl font-bold text-secondary-900 mb-4">
+            Find the proxy answer before you browse the archive
+          </h1>
+          <p class="text-lg text-secondary-600 mb-6">
+            Search a proxy error, provider question, scraping workflow, or IP type. The page below is the fallback archive; the primary task is getting to one useful answer fast.
+          </p>
+          <div class="max-w-2xl">
+            <SearchBox size="lg" autofocus placeholder="Search proxy questions, errors, providers, or scraping setups..." />
+          </div>
+          <div class="mt-5 flex flex-wrap gap-2 text-sm">
+            <a href="/search?q=residential%20proxy" class="badge-secondary hover:text-primary-700">Residential proxy</a>
+            <a href="/search?q=rotating%20proxy" class="badge-secondary hover:text-primary-700">Rotating proxy</a>
+            <a href="/search?q=proxy%20blocked" class="badge-secondary hover:text-primary-700">Proxy blocked</a>
+            <a href="/search?q=datacenter%20proxy" class="badge-secondary hover:text-primary-700">Datacenter proxy</a>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -69,6 +82,13 @@ const pageUrl = `${siteUrl}/q`;
 
           <!-- Main Content - Questions -->
           <main class="lg:col-span-3">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold text-secondary-900 mb-2">Popular proxy questions</h2>
+              <p class="text-secondary-600">
+                Browse {questions.length.toLocaleString()} high-traffic questions only after trying the finder above.
+              </p>
+            </div>
+
             <div class="grid gap-4">
               {questions.map((question) => <QuestionCard question={question} />)}
             </div>
