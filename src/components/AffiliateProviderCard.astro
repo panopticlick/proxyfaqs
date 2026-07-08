@@ -14,6 +14,7 @@ const { provider } = Astro.props;
     <span class="badge-primary capitalize">{provider.type}</span>
   </div>
   <p class="text-sm text-secondary-600 mb-4 flex-1">{provider.tagline}</p>
+  {provider.evidenceNote && <p class="text-xs text-secondary-500 mb-4">{provider.evidenceNote}</p>}
   <a
     href={provider.href}
     target="_blank"

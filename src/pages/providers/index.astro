@@ -4,6 +4,12 @@ export const prerender = true;
 import Base from '../../layouts/Base.astro';
 import ProviderCard from '../../components/ProviderCard.astro';
 import { assertBuildDataNonEmpty, handleBuildDataError } from '../../lib/build-data';
+import {
+  getProviderDisplayName,
+  getProviderFallbackDescription,
+  getTopProviderEvidence,
+  methodologyHighlights,
+} from '../../lib/content-intelligence';
 import { getProviders, type Provider } from '../../lib/supabase';
 import { generateCollectionPageSchema } from '../../lib/utils';
 import { env } from '../../lib/env';
@@ -20,36 +26,32 @@ assertBuildDataNonEmpty('providers index providers', providers.length);
 
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/providers`;
+const editorialShortlist = getTopProviderEvidence();
 
 const jsonLd = [
   generateCollectionPageSchema({
-    name: 'Compare Proxy Providers - ProxyFAQs',
-    description: 'Compare top proxy providers for web scraping. Find the best residential, datacenter, and mobile proxies with real reviews and pricing data.',
+    name: 'Proxy Provider Reviews - ProxyFAQs',
+    description: 'Browse provider profiles, product-fit notes, and research-backed comparison guidance for proxy and scraping vendors.',
     url: pageUrl,
     itemCount: providers.length,
     items: providers.slice(0, 10).map(provider => ({
-      name: provider.name,
+      name: getProviderDisplayName(provider),
       url: `${siteUrl}/providers/${provider.slug}`,
     })),
   }),
   {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'Top Proxy Providers',
-    description: 'Compare the best proxy providers for web scraping and data extraction',
+    name: 'Proxy provider profiles',
+    description: 'Browse proxy and scraping provider profiles by product fit and research notes.',
     itemListElement: providers.slice(0, 10).map((provider, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       item: {
-        '@type': 'Product',
-        name: provider.name,
-        description: provider.description,
+        '@type': 'Thing',
+        name: getProviderDisplayName(provider),
+        description: getProviderFallbackDescription(provider) || provider.description || undefined,
         url: `${siteUrl}/providers/${provider.slug}`,
-        aggregateRating: provider.rating ? {
-          '@type': 'AggregateRating',
-          ratingValue: provider.rating,
-          bestRating: 5,
-        } : undefined,
       },
     })),
   },
@@ -57,8 +59,8 @@ const jsonLd = [
 ---
 
 <Base
-  title="Compare Proxy Providers"
-  description="Compare top proxy providers for web scraping. Find the best residential, datacenter, and mobile proxies with real reviews and pricing data."
+  title="Proxy Provider Reviews"
+  description="Browse provider profiles, product-fit notes, and research-backed comparison guidance for proxy and scraping vendors."
   canonicalUrl={pageUrl}
   jsonLd={jsonLd}
 >
@@ -68,21 +70,58 @@ const jsonLd = [
       <div class="container-custom">
         <div class="text-center mb-8">
           <h1 class="text-3xl md:text-4xl font-bold text-secondary-900 mb-4">
-            Compare Proxy Providers
+            Proxy Provider Reviews
           </h1>
           <p class="text-lg text-secondary-600 max-w-2xl mx-auto">
-            Unbiased reviews and real data. Find the perfect proxy provider for your web scraping
-            needs.
+            Use this page to browse provider profiles by job fit, not by hype. Proxy networks,
+            scraping APIs, and actor-style tooling are compared as separate product shapes.
           </p>
         </div>
 
-        <!-- Filter Pills (Static for MVP) -->
         <div class="flex flex-wrap justify-center gap-2">
-          <button class="category-pill bg-primary-100 text-primary-700">All Providers</button>
-          <button class="category-pill">Residential</button>
-          <button class="category-pill">Datacenter</button>
-          <button class="category-pill">Mobile</button>
-          <button class="category-pill">Rotating</button>
+          <span class="category-pill bg-primary-100 text-primary-700">Residential</span>
+          <span class="category-pill">Datacenter</span>
+          <span class="category-pill">Mobile</span>
+          <span class="category-pill">ISP</span>
+          <span class="category-pill">Scraping APIs</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="py-8 bg-white border-b border-secondary-100">
+      <div class="container-custom">
+        <div class="grid gap-6 lg:grid-cols-[1.3fr,1fr]">
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">How to read these provider profiles</h2>
+            <ul class="space-y-3 text-secondary-600">
+              {methodologyHighlights.map((item) => (
+                <li class="flex items-start gap-2">
+                  <span class="text-primary-600 mt-1">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Editorial shortlist</h2>
+            <div class="space-y-3">
+              {editorialShortlist.map((item) => (
+                <a
+                  href={`/providers/${item.slug}`}
+                  class="block rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-3 hover:border-primary-300"
+                >
+                  <div class="font-semibold text-secondary-900">{item.displayName}</div>
+                  <div class="text-sm text-secondary-600 mt-1">
+                    {item.bestFor[0]}
+                  </div>
+                  <div class="text-xs text-secondary-500 mt-2">
+                    Reviewed {item.lastReviewed}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -128,8 +167,9 @@ const jsonLd = [
           <p class="text-secondary-600 text-sm">
             Some links on this page are affiliate links. This means we may earn a commission if you
             sign up through our links, at no extra cost to you. This helps us maintain the site and
-            provide unbiased reviews. We only recommend services we've personally tested and believe
-            in.
+            provide comparison research and editorial guidance. Recommendations are based on the
+            site's current research layer, product-fit notes, and dated evidence, not on universal
+            scores.
           </p>
         </div>
       </div>

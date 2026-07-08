@@ -2,12 +2,15 @@
 export const prerender = true;
 
 import Base from '../../layouts/Base.astro';
-import ProviderCard from '../../components/ProviderCard.astro';
+import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
+import AffiliateProviderCard from '../../components/AffiliateProviderCard.astro';
 import { guides, getGuideBySlug } from '../../lib/guides';
-import { getProviders, type Provider } from '../../lib/supabase';
+import { getProvidersForType, inferProviderTypeFromGuide } from '../../lib/affiliate';
+import { getGuideUpgrade } from '../../lib/content-intelligence';
 import { generateBreadcrumbSchema, generateArticleSchema, formatDate } from '../../lib/utils';
 import { env } from '../../lib/env';
 import { marked } from 'marked';
+import { getProxyClusters } from '../../lib/pseo';
 
 export async function getStaticPaths() {
   return guides.map((guide) => ({ params: { slug: guide.slug } }));
@@ -20,14 +23,28 @@ if (!guide) {
   return Astro.redirect('/404');
 }
 
-let providers: Provider[] = [];
-try {
-  providers = await getProviders();
-} catch (error) {
-  console.error('Error fetching providers:', error);
-}
-
-const featuredProviders = providers.slice(0, 3);
+const providerType = inferProviderTypeFromGuide(guide.slug);
+const featuredProviders = getProvidersForType(providerType, 3);
+const guideUpgrade = getGuideUpgrade(guide.slug);
+const prioritizedNextGuideSlugs = guideUpgrade?.recommendedNext ?? [];
+const remainingGuides = guides.filter((item) => item.slug !== guide.slug);
+const recommendedNextGuides = prioritizedNextGuideSlugs
+  .map((nextSlug) => remainingGuides.find((item) => item.slug === nextSlug))
+  .filter((item): item is (typeof guides)[number] => !!item)
+  .concat(
+    remainingGuides.filter((item) => !prioritizedNextGuideSlugs.includes(item.slug)),
+  )
+  .slice(0, 4);
+const relatedUseCases = getProxyClusters()
+  .filter((page) => {
+    const text = `${page.keyword} ${page.topic} ${page.tags.join(' ')}`.toLowerCase();
+    return (
+      text.includes(providerType) ||
+      text.includes(guide.slug.replace(/-/g, ' ')) ||
+      text.includes(guide.category.toLowerCase())
+    );
+  })
+  .slice(0, 4);
 
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/guides/${guide.slug}`;
@@ -97,24 +114,73 @@ const updatedLabel = formatDate(guide.updatedAt);
             <div class="prose-custom" set:html={contentHtml} />
           </div>
 
+          {
+            guideUpgrade && (
+              <div class="grid gap-6 md:grid-cols-2 mt-6">
+                <div class="card">
+                  <h2 class="text-2xl font-bold text-secondary-900 mb-4">How to evaluate this topic</h2>
+                  <ul class="space-y-3 text-secondary-600">
+                    {guideUpgrade.evaluationLens.map((item) => (
+                      <li class="flex items-start gap-2">
+                        <span class="text-primary-600 mt-1">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div class="card">
+                  <h2 class="text-2xl font-bold text-secondary-900 mb-4">Common mistakes</h2>
+                  <ul class="space-y-3 text-secondary-600">
+                    {guideUpgrade.practicalMistakes.map((item) => (
+                      <li class="flex items-start gap-2">
+                        <span class="text-primary-600 mt-1">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )
+          }
+
           <div class="card mt-6">
             <h2 class="text-2xl font-bold text-secondary-900 mb-4">Recommended providers</h2>
             <p class="text-secondary-600 mb-6">
-              Curated providers based on this guide’s focus. Affiliate links disclosed.
+              These picks match the guide intent first, then product fit. Raw proxy vendors and scraping-tool workflows are kept separate where the buying problem changes.
             </p>
+            <AffiliateDisclosure variant="inline" />
             <div class="grid sm:grid-cols-2 gap-4">
               {featuredProviders.length > 0 ? (
                 featuredProviders.map((provider) => (
-                  <ProviderCard provider={provider} showRank={false} />
+                  <AffiliateProviderCard provider={provider} />
                 ))
               ) : (
                 <p class="text-sm text-secondary-500">Provider data is loading.</p>
               )}
             </div>
-            <p class="text-xs text-secondary-500 mt-4">
-              Affiliate disclosure: we may earn a commission at no extra cost to you.
-            </p>
           </div>
+
+          {
+            relatedUseCases.length > 0 && (
+              <div class="card mt-6">
+                <h2 class="text-2xl font-bold text-secondary-900 mb-4">Related use cases</h2>
+                <p class="text-secondary-600 mb-4">
+                  Use these pages when you want a more target-specific checklist than a broad guide can provide.
+                </p>
+                <div class="grid gap-3 md:grid-cols-2">
+                  {relatedUseCases.map((page) => (
+                    <a
+                      href={`/use-cases/${page.slug}`}
+                      class="rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-3 text-sm text-secondary-700 hover:border-primary-300 hover:text-primary-700"
+                    >
+                      {page.pageTitle}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )
+          }
         </main>
 
         <aside class="lg:col-span-1">
@@ -122,10 +188,7 @@ const updatedLabel = formatDate(guide.updatedAt);
             <div class="card">
               <h2 class="font-semibold text-secondary-900 mb-3">Recommended next</h2>
               <div class="space-y-3">
-                {guides
-                  .filter((item) => item.slug !== guide.slug)
-                  .slice(0, 4)
-                  .map((item) => (
+                {recommendedNextGuides.map((item) => (
                     <a
                       href={`/guides/${item.slug}`}
                       class="block p-3 rounded-lg hover:bg-secondary-50 transition-colors"

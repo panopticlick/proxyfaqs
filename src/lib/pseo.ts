@@ -21,7 +21,10 @@ export interface ProxyClusterPage {
   competitors: string[];
 }
 
-const DATA_PATH_SUFFIX = ['..', 'data', 'proxy_clusters_2026-01-05.csv'];
+const DATA_PATH_CANDIDATES = [
+  ['data', 'proxy_clusters_2026-01-05.csv'],
+  ['..', 'data', 'proxy_clusters_2026-01-05.csv'],
+];
 
 let cache: ProxyClusterPage[] | null = null;
 
@@ -71,14 +74,19 @@ export function getProxyClusters(): ProxyClusterPage[] {
     return cache;
   }
 
-  const DATA_PATH = nodePath.resolve(process.cwd(), ...DATA_PATH_SUFFIX);
+  const dataPath = DATA_PATH_CANDIDATES.map((parts) => nodePath.resolve(process.cwd(), ...parts))
+    .find((candidate) => nodeFs.existsSync(candidate));
 
-  if (!nodeFs.existsSync(DATA_PATH)) {
+  if (!dataPath) {
+    console.warn(
+      '[pseo] proxy cluster source not found. Checked:',
+      DATA_PATH_CANDIDATES.map((parts) => nodePath.resolve(process.cwd(), ...parts)).join(', ')
+    );
     cache = [];
     return cache;
   }
 
-  const rawCsv = nodeFs.readFileSync(DATA_PATH, 'utf-8').replace(/^\uFEFF/, '');
+  const rawCsv = nodeFs.readFileSync(dataPath, 'utf-8').replace(/^\uFEFF/, '');
   const parsed = Papa.parse<Record<string, string>>(rawCsv, {
     header: true,
     skipEmptyLines: true,

@@ -31,7 +31,7 @@ interface Provider {
   cons: string[];
   affiliate_url: string;
   affiliate_code: string;
-  rating: number;
+  rating: number | null;
   rank: number;
   review_html: string;
 }
@@ -171,14 +171,14 @@ function parseDomainCSV(filePath: string): Map<string, any> {
 // Load affiliate links
 function loadAffiliateLinks(): Map<string, string> {
   const affiliateLinks = new Map<string, string>();
-  const affiliateFilePath = path.join(process.cwd(), '../docs/proxy-provider-affiliate-links.csv');
+  const affiliateFilePath = path.join(process.cwd(), 'docs/proxy-provider-affiliate-links.csv');
 
   if (!fs.existsSync(affiliateFilePath)) {
     console.warn('⚠️  No affiliate links file found');
     return affiliateLinks;
   }
 
-  const content = fs.readFileSync(affiliateFilePath, 'utf-8');
+  const content = fs.readFileSync(affiliateFilePath, 'latin1');
   const lines = content.split('\n');
 
   for (let i = 1; i < lines.length; i++) {
@@ -263,16 +263,16 @@ async function importProviders() {
     providers.push({
       slug,
       name: product.name,
-      description: `${product.name} is a professional proxy service provider offering high-quality proxies for web scraping, data collection, and online privacy.`,
+      description: `Provider profile for ${product.name}. Product coverage, pricing, and review notes should be verified against official pages before publication.`,
       logo_url: `https://logo.clearbit.com/${product.domain}`,
       website_url: domain?.website_url || `https://${product.domain}`,
       features,
       pricing: pricingObj,
-      pros: pros.length > 0 ? pros : ['High-quality proxies', 'Reliable service'],
-      cons: cons.length > 0 ? cons : ['Pricing varies by plan'],
+      pros,
+      cons,
       affiliate_url: affiliateUrl,
       affiliate_code: '',
-      rating: 4.0 + Math.random(), // Random rating between 4.0-5.0
+      rating: null,
       rank: rank++,
       review_html: '',
     });

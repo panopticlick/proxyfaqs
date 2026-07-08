@@ -1,8 +1,18 @@
 ---
 export const prerender = true;
 
+import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
 import Base from '../../layouts/Base.astro';
 import { getProvider, getAllProviderSlugs, getProviders, type Provider } from '../../lib/supabase';
+import {
+  getProviderDisplayName,
+  getProviderCons,
+  getProviderEvidence,
+  getProviderFallbackDescription,
+  getProviderPros,
+  hasSubstantiveReview,
+  shouldShowEditorialRating,
+} from '../../lib/content-intelligence';
 import { generateBreadcrumbSchema, generateProductSchema } from '../../lib/utils';
 import { env } from '../../lib/env';
 
@@ -36,54 +46,112 @@ if (!provider) {
 const siteUrl = env.SITE;
 const pageUrl = `${siteUrl}/providers/${slug}`;
 
-const stars = provider.rating ? Math.round(provider.rating) : 0;
-const hasReview =
-  typeof provider.review_html === 'string' && provider.review_html.trim().length > 0;
-const hasDescription =
-  typeof provider.description === 'string' && provider.description.trim().length >= 120;
-const shouldNoindex = !(hasReview || hasDescription);
+const editorial = getProviderEvidence(provider);
+const displayName = getProviderDisplayName(provider);
+const rawDescription = provider.description?.trim() || '';
+const isGenericDescription =
+  rawDescription.includes('professional proxy service provider') ||
+  rawDescription.includes('Product coverage, pricing, and review notes should be verified');
+const fallbackDescription = getProviderFallbackDescription(provider);
+const pageDescription =
+  rawDescription && !isGenericDescription && rawDescription.length >= 120
+    ? rawDescription
+    : fallbackDescription ||
+      `Research-backed profile for ${displayName}: product fit, watchouts, and comparison notes.`;
+const hasReviewHtml =
+  typeof provider.review_html === 'string' &&
+  provider.review_html.replace(/<[^>]*>/g, '').trim().length >= 500;
+const substantiveReview = hasSubstantiveReview(provider);
+const canShowRating = shouldShowEditorialRating(provider) && hasReviewHtml;
+const stars = canShowRating && provider.rating ? Math.round(provider.rating) : 0;
+const shouldNoindex = !(substantiveReview || editorial);
+const providerPros = getProviderPros(provider);
+const providerCons = getProviderCons(provider);
 
 const hasAffiliateLink = !!provider.affiliate_url;
 
-// Build price range from pricing data
-const priceRange = provider.pricing?.starting_price
-  ? `$${provider.pricing.starting_price}+`
-  : undefined;
+const rawStartingPrice =
+  provider.pricing && typeof provider.pricing === 'object'
+    ? provider.pricing['starting_price']
+    : undefined;
+const formatPriceRange = (value: unknown) => {
+  if (typeof value === 'number') {
+    return `$${value}+`;
+  }
 
-const jsonLd = [
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (/contact/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^\$\d/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^\d+(\.\d+)?$/.test(trimmed)) {
+    return `$${trimmed}+`;
+  }
+
+  if (/^\d/.test(trimmed)) {
+    return `$${trimmed}`;
+  }
+
+  return trimmed;
+};
+const priceRange =
+  formatPriceRange(rawStartingPrice);
+
+const jsonLd: object[] = [
   generateBreadcrumbSchema([
     { name: 'Home', url: siteUrl },
     { name: 'Providers', url: `${siteUrl}/providers` },
-    { name: provider.name, url: pageUrl },
+    { name: displayName, url: pageUrl },
   ]),
-  generateProductSchema({
-    name: provider.name,
-    description: provider.description || `${provider.name} proxy service review`,
-    url: pageUrl,
-    logo: provider.logo_url ?? undefined,
-    rating: provider.rating ?? undefined,
-    reviewCount: provider.review_count ?? undefined,
-    priceRange,
-  }),
-  {
+];
+
+if (!shouldNoindex) {
+  jsonLd.push(
+    generateProductSchema({
+      name: displayName,
+      description: pageDescription,
+      url: pageUrl,
+      logo: provider.logo_url ?? undefined,
+      rating: canShowRating ? provider.rating ?? undefined : undefined,
+      reviewCount: canShowRating ? provider.review_count ?? undefined : undefined,
+      priceRange,
+    }),
+  );
+}
+
+if (canShowRating && typeof provider.rating === 'number') {
+  jsonLd.push({
     '@context': 'https://schema.org',
     '@type': 'Review',
     itemReviewed: {
       '@type': 'Organization',
-      name: provider.name,
+      name: displayName,
     },
     author: {
       '@type': 'Organization',
       name: 'ProxyFAQs',
     },
-    reviewRating: provider.rating ? {
+    reviewRating: {
       '@type': 'Rating',
       ratingValue: provider.rating,
       bestRating: 5,
-    } : undefined,
-    reviewBody: provider.description ?? '',
-  },
-];
+    },
+    reviewBody: pageDescription,
+  });
+}
 
 const websiteHostname = provider.website_url
   ? (() => {
@@ -97,10 +165,10 @@ const websiteHostname = provider.website_url
 ---
 
 <Base
-  title={`${provider.name} Review`}
-  description={provider.description ||
-    `Read our in-depth review of ${provider.name}. Compare features, pricing, pros and cons.`}
+  title={`${displayName} Review`}
+  description={pageDescription}
   canonicalUrl={pageUrl}
+  noindex={shouldNoindex}
   jsonLd={jsonLd}
   ogType="product"
 >
@@ -124,7 +192,7 @@ const websiteHostname = provider.website_url
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
               ></path>
             </svg>
-            <span class="text-secondary-900">{provider.name}</span>
+            <span class="text-secondary-900">{displayName}</span>
           </li>
         </ol>
       </nav>
@@ -162,7 +230,7 @@ const websiteHostname = provider.website_url
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
                   {
-                    provider.rank && (
+                    provider.rank && canShowRating && (
                       <span class="bg-primary-600 text-white text-sm font-bold px-3 py-1 rounded-full">
                         #{provider.rank} Provider
                       </span>
@@ -171,12 +239,20 @@ const websiteHostname = provider.website_url
                 </div>
 
                 <h1 class="text-2xl md:text-3xl font-bold text-secondary-900 mb-2">
-                  {provider.name} Review
+                  {displayName} Review
                 </h1>
+
+                {
+                  displayName !== provider.name && (
+                    <p class="text-sm text-secondary-500 mb-2">
+                      Listed in the current database as {provider.name}. This page uses the latest brand-safe naming available in the local research layer.
+                    </p>
+                  )
+                }
 
                 {/* Rating */}
                 {
-                  provider.rating && (
+                  canShowRating && provider.rating && (
                     <div class="flex items-center gap-2 mb-3">
                       <div class="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
@@ -200,7 +276,7 @@ const websiteHostname = provider.website_url
                   )
                 }
 
-                {provider.description && <p class="text-secondary-600">{provider.description}</p>}
+                <p class="text-secondary-600">{pageDescription}</p>
               </div>
             </div>
 
@@ -214,7 +290,7 @@ const websiteHostname = provider.website_url
                     rel="noopener sponsored"
                     class="btn-primary"
                   >
-                    Visit {provider.name}
+                    Visit {displayName}
                     <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         stroke-linecap="round"
@@ -241,10 +317,58 @@ const websiteHostname = provider.website_url
             </div>
           </div>
 
+          {
+            editorial && (
+              <>
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                  <div class="card">
+                    <h2 class="text-xl font-semibold text-secondary-900 mb-4">Where this provider fits</h2>
+                    <ul class="space-y-3 text-secondary-700">
+                      {editorial.bestFor.map((item) => (
+                        <li class="flex items-start gap-2">
+                          <span class="text-primary-600 mt-1">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div class="card">
+                    <h2 class="text-xl font-semibold text-secondary-900 mb-4">What to verify before buying</h2>
+                    <ul class="space-y-3 text-secondary-700">
+                      {editorial.watchouts.map((item) => (
+                        <li class="flex items-start gap-2">
+                          <span class="text-primary-600 mt-1">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="card mb-8">
+                  <h2 class="text-xl font-semibold text-secondary-900 mb-4">Research-backed notes</h2>
+                  <p class="text-secondary-600 mb-4">
+                    Reviewed against {editorial.sourceLabel.toLowerCase()} on {editorial.lastReviewed}. This section is intended to replace generic provider copy with merchant-safe fit notes and dated evidence.
+                  </p>
+                  <ul class="space-y-3 text-secondary-700">
+                    {editorial.proofPoints.map((item) => (
+                      <li class="flex items-start gap-2">
+                        <span class="text-primary-600 mt-1">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {editorial.pricingNote && <p class="text-sm text-secondary-500 mt-4">{editorial.pricingNote}</p>}
+                </div>
+              </>
+            )
+          }
+
           <!-- Pros & Cons -->
           <div class="grid md:grid-cols-2 gap-6 mb-8">
             {
-              provider.pros && provider.pros.length > 0 && (
+              providerPros.length > 0 && (
                 <div class="card">
                   <h2 class="flex items-center gap-2 text-lg font-semibold text-green-700 mb-4">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +382,7 @@ const websiteHostname = provider.website_url
                     Pros
                   </h2>
                   <ul class="space-y-3">
-                    {provider.pros.map((pro) => (
+                    {providerPros.map((pro) => (
                       <li class="flex items-start gap-2 text-secondary-700">
                         <svg
                           class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
@@ -282,7 +406,7 @@ const websiteHostname = provider.website_url
             }
 
             {
-              provider.cons && provider.cons.length > 0 && (
+              providerCons.length > 0 && (
                 <div class="card">
                   <h2 class="flex items-center gap-2 text-lg font-semibold text-red-700 mb-4">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,7 +420,7 @@ const websiteHostname = provider.website_url
                     Cons
                   </h2>
                   <ul class="space-y-3">
-                    {provider.cons.map((con) => (
+                    {providerCons.map((con) => (
                       <li class="flex items-start gap-2 text-secondary-700">
                         <svg
                           class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
@@ -354,9 +478,43 @@ const websiteHostname = provider.website_url
             )
           }
 
+          <div class="card mb-8">
+            <h2 class="text-xl font-semibold text-secondary-900 mb-4">Continue comparing</h2>
+            <div class="grid sm:grid-cols-2 gap-3 text-sm">
+              <a
+                href="/guides/provider-comparison"
+                class="rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-3 text-secondary-700 hover:border-primary-300 hover:text-primary-700"
+              >
+                Read the provider comparison guide
+              </a>
+              <a
+                href="/guides/choosing-proxy-type"
+                class="rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-3 text-secondary-700 hover:border-primary-300 hover:text-primary-700"
+              >
+                Match proxy type to workload
+              </a>
+              <a
+                href="/use-cases"
+                class="rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-3 text-secondary-700 hover:border-primary-300 hover:text-primary-700"
+              >
+                Browse target-specific use cases
+              </a>
+              {
+                (editorial?.slug === 'bright-data' || editorial?.slug === 'apify') && (
+                  <a
+                    href="/guides/bright-data-vs-apify-for-scraping"
+                    class="rounded-lg border border-secondary-200 bg-secondary-50 px-4 py-3 text-secondary-700 hover:border-primary-300 hover:text-primary-700"
+                  >
+                    Compare Bright Data vs Apify
+                  </a>
+                )
+              }
+            </div>
+          </div>
+
           <!-- Review Content -->
           {
-            provider.review_html && (
+            hasReviewHtml && (
               <div class="card">
                 <h2 class="text-xl font-semibold text-secondary-900 mb-4">Full Review</h2>
                 <div class="prose-custom" set:html={provider.review_html} />
@@ -382,12 +540,24 @@ const websiteHostname = provider.website_url
                     </dd>
                   </div>
                 )}
-                {provider.pricing && Object.keys(provider.pricing).length > 0 && (
+                {priceRange && (
                   <div class="flex justify-between">
                     <dt class="text-secondary-500">Starting From</dt>
                     <dd class="font-medium text-secondary-900">
-                      {provider.pricing.starting_price || 'Contact for pricing'}
+                      {priceRange}
                     </dd>
+                  </div>
+                )}
+                {editorial && (
+                  <div class="flex justify-between gap-4">
+                    <dt class="text-secondary-500">Research updated</dt>
+                    <dd class="text-right text-secondary-900">{editorial.lastReviewed}</dd>
+                  </div>
+                )}
+                {editorial && (
+                  <div class="pt-2 border-t border-secondary-100">
+                    <dt class="text-secondary-500 mb-1">Evidence source</dt>
+                    <dd class="text-secondary-700">{editorial.sourceLabel}</dd>
                   </div>
                 )}
               </dl>
@@ -417,19 +587,14 @@ const websiteHostname = provider.website_url
                         <span class="text-primary-600 font-bold text-sm">{other.name.charAt(0)}</span>
                       </div>
                     )}
-                    <span class="text-secondary-700 hover:text-primary-600">{other.name}</span>
+                    <span class="text-secondary-700 hover:text-primary-600">{getProviderDisplayName(other)}</span>
                   </a>
                 ))}
               </div>
             </div>
 
             <!-- Affiliate Note -->
-            <div class="p-4 rounded-lg bg-secondary-50 text-sm text-secondary-600">
-              <p>
-                <strong>Affiliate Disclosure:</strong> Links on this page may earn us a commission at
-                no extra cost to you.
-              </p>
-            </div>
+            {hasAffiliateLink && <AffiliateDisclosure variant="sidebar" />}
           </div>
         </aside>
       </div>

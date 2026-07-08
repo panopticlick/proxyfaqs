@@ -106,7 +106,7 @@ const jsonLd = [
 
 <Base
   title="ProxyFAQs - The Stack Overflow for Proxies"
-  description={`Find answers to ${questionCountLabel}+ questions about proxies, web scraping, and data extraction. Compare proxy providers with real data and get expert AI assistance.`}
+  description={`Find answers to ${questionCountLabel}+ questions about proxies, web scraping, and data extraction. Browse research-backed provider profiles and get practical AI guidance.`}
   jsonLd={jsonLd}
   keywords="proxy, proxies, web scraping, residential proxy, datacenter proxy, rotating proxy, proxy provider, scraping tools, anti-detection, proxy comparison"
 >
@@ -204,6 +204,52 @@ const jsonLd = [
     </div>
   </section>
 
+  <section class="py-16 bg-white" aria-labelledby="decision-title">
+    <div class="container-custom">
+      <div class="text-center mb-12">
+        <h2 id="decision-title" class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
+          Start With the Right Decision
+        </h2>
+        <p class="text-secondary-600 max-w-3xl mx-auto">
+          Most proxy problems are really three different buying decisions: picking the proxy type,
+          choosing a vendor, or deciding whether you need a scraper platform instead of raw IPs.
+        </p>
+      </div>
+
+      <div class="grid gap-6 lg:grid-cols-3">
+        <a href="/guides/choosing-proxy-type" class="card-hover flex flex-col">
+          <p class="badge-secondary w-fit mb-3">Proxy Types</p>
+          <h3 class="text-xl font-semibold text-secondary-900 mb-3">Residential, datacenter, ISP, or mobile?</h3>
+          <p class="text-secondary-600 mb-4 flex-1">
+            Use this path when the scraper already exists and the real question is what kind of IP
+            reputation or session behavior the target needs.
+          </p>
+          <span class="text-primary-600 font-medium">Choose a proxy type →</span>
+        </a>
+
+        <a href="/providers" class="card-hover flex flex-col">
+          <p class="badge-secondary w-fit mb-3">Provider Reviews</p>
+          <h3 class="text-xl font-semibold text-secondary-900 mb-3">Which vendor fits the workload?</h3>
+          <p class="text-secondary-600 mb-4 flex-1">
+            Browse provider profiles with best-fit notes, watchouts, and dated research instead of
+            one-size-fits-all rankings.
+          </p>
+          <span class="text-primary-600 font-medium">Compare providers →</span>
+        </a>
+
+        <a href="/guides/bright-data-vs-apify-for-scraping" class="card-hover flex flex-col">
+          <p class="badge-secondary w-fit mb-3">Scraping Stack</p>
+          <h3 class="text-xl font-semibold text-secondary-900 mb-3">Do you need proxies or a scraping platform?</h3>
+          <p class="text-secondary-600 mb-4 flex-1">
+            Compare Bright Data and Apify by job: managed access to data, scraper APIs, actor
+            workflows, and browser-heavy automation.
+          </p>
+          <span class="text-primary-600 font-medium">Compare Bright Data vs Apify →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
   <!-- Popular Questions Section -->
   <section class="py-16 bg-secondary-50" aria-labelledby="popular-title">
     <div class="container-custom">
@@ -228,10 +274,10 @@ const jsonLd = [
     <div class="container-custom">
       <div class="text-center mb-12">
         <h2 id="providers-title" class="text-2xl md:text-3xl font-bold text-secondary-900 mb-4">
-          Compare Top Proxy Providers
+          Browse Proxy Providers
         </h2>
         <p class="text-secondary-600 max-w-2xl mx-auto">
-          Real data, unbiased reviews. Find the perfect proxy provider for your needs.
+          Research-backed provider profiles, fit notes, and comparison paths for proxy and scraping workloads.
         </p>
       </div>
 

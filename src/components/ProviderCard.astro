@@ -1,5 +1,13 @@
 ---
 import type { Provider } from '../lib/supabase';
+import {
+  getProviderDisplayName,
+  getProviderEvidence,
+  getProviderFallbackDescription,
+  getProviderCons,
+  getProviderPros,
+  shouldShowEditorialRating,
+} from '../lib/content-intelligence';
 
 export interface Props {
   provider: Provider;
@@ -8,13 +16,25 @@ export interface Props {
 
 const { provider, showRank = true } = Astro.props;
 
-const stars = provider.rating ? Math.round(provider.rating) : 0;
+const canShowRating = shouldShowEditorialRating(provider);
+const stars = canShowRating && provider.rating ? Math.round(provider.rating) : 0;
+const editorial = getProviderEvidence(provider);
+const displayName = getProviderDisplayName(provider);
+const description = provider.description?.trim() || '';
+const isGenericDescription =
+  description.includes('professional proxy service provider') ||
+  description.includes('Product coverage, pricing, and review notes should be verified');
+const fallbackDescription = getProviderFallbackDescription(provider);
+const cardDescription =
+  description && !isGenericDescription && description.length >= 120 ? description : fallbackDescription;
+const providerPros = getProviderPros(provider);
+const providerCons = getProviderCons(provider);
 ---
 
 <div class="provider-card group">
   <!-- Rank Badge -->
   {
-    showRank && provider.rank && (
+    showRank && provider.rank && canShowRating && (
       <div class="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-bold">
         #{provider.rank}
       </div>
@@ -44,12 +64,12 @@ const stars = provider.rating ? Math.round(provider.rating) : 0;
 
       <div class="flex-1 min-w-0">
         <h3 class="font-semibold text-secondary-900 group-hover:text-primary-600 transition-colors">
-          {provider.name}
+          {displayName}
         </h3>
 
         {/* Rating */}
         {
-          provider.rating && (
+          canShowRating && provider.rating && (
             <div class="flex items-center gap-1 mt-1">
               {[...Array(5)].map((_, i) => (
                 <svg
@@ -69,8 +89,16 @@ const stars = provider.rating ? Math.round(provider.rating) : 0;
 
     <!-- Description -->
     {
-      provider.description && (
-        <p class="text-sm text-secondary-600 mb-4 line-clamp-3 flex-1">{provider.description}</p>
+      cardDescription && (
+        <p class="text-sm text-secondary-600 mb-4 line-clamp-3 flex-1">{cardDescription}</p>
+      )
+    }
+
+    {
+      editorial?.pricingNote && (
+        <p class="text-xs text-secondary-500 mb-4">
+          {editorial.pricingNote}
+        </p>
       )
     }
 
@@ -92,7 +120,7 @@ const stars = provider.rating ? Math.round(provider.rating) : 0;
     <!-- Pros/Cons Preview -->
     <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
       {
-        provider.pros && provider.pros.length > 0 && (
+        providerPros.length > 0 && (
           <div>
             <div class="flex items-center gap-1 text-green-600 font-medium mb-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +134,7 @@ const stars = provider.rating ? Math.round(provider.rating) : 0;
               Pros
             </div>
             <ul class="text-secondary-600 space-y-1">
-              {provider.pros.slice(0, 2).map((pro) => (
+              {providerPros.slice(0, 2).map((pro) => (
                 <li class="line-clamp-1">{pro}</li>
               ))}
             </ul>
@@ -115,7 +143,7 @@ const stars = provider.rating ? Math.round(provider.rating) : 0;
       }
 
       {
-        provider.cons && provider.cons.length > 0 && (
+        providerCons.length > 0 && (
           <div>
             <div class="flex items-center gap-1 text-red-600 font-medium mb-1">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,7 +157,7 @@ const stars = provider.rating ? Math.round(provider.rating) : 0;
               Cons
             </div>
             <ul class="text-secondary-600 space-y-1">
-              {provider.cons.slice(0, 2).map((con) => (
+              {providerCons.slice(0, 2).map((con) => (
                 <li class="line-clamp-1">{con}</li>
               ))}
             </ul>

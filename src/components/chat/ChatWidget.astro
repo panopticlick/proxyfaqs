@@ -362,36 +362,6 @@ const starterQuestions = [
       .replace(/`(.*?)`/g, '<code class="bg-secondary-100 px-1 rounded text-xs">$1</code>')
       .replace(/\n\n/g, '</p><p class="mt-2">')
       .replace(/\n/g, '<br>');
-
-    codeBlocks.forEach((code, index) => {
-      const block = `<pre><code>${code}</code></pre>`;
-      formatted = formatted.replace(`__CODE_BLOCK_${index}__`, block);
-    });
-
-    return formatted;
-  }
-
-  // Check if response contains affiliate links
-  function hasAffiliateLinks(text: string): boolean {
-    const affiliateDomains = [
-      'brightdata.com',
-      'luminati.com',
-      'soax.com',
-      'smartproxy.com',
-      'proxy-seller.com',
-      'webshare.io',
-      'rayobyte.com',
-      'oxylabs.io',
-      'thesocialproxy.com',
-      'proxy-cheap.com',
-      'get.brightdata.com',
-      'smartproxy.pxf.io',
-    ];
-    const lowerText = text.toLowerCase();
-    return (
-      affiliateDomains.some((domain) => lowerText.includes(domain)) ||
-      /affiliate|commission|referral/i.test(text)
-    );
   }
 </script>
 

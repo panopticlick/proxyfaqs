@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import AffiliateDisclosure from '../../components/AffiliateDisclosure.astro';
 import AffiliateProviderCard from '../../components/AffiliateProviderCard.astro';
 import {
   generateArticleSchema,
@@ -7,6 +8,13 @@ import {
   generateFAQSchema,
   generateHowToSchema,
 } from '../../lib/utils';
+import {
+  getCompetitorLinks,
+  getContentReferenceLinks,
+  getUseCaseInsight,
+  getUseCasePitfalls,
+  getUseCaseSignals,
+} from '../../lib/content-intelligence';
 import {
   getProxyClusterBySlug,
   getProxyClusters,
@@ -34,6 +42,11 @@ const pageUrl = `${siteUrl}/use-cases/${page.slug}`;
 const proxyType = inferProxyType(page);
 const providers = getProvidersForType(proxyType, 3);
 const relatedPages = getRelatedProxyClusters(page, 6);
+const useCaseInsight = getUseCaseInsight(page, proxyType);
+const pageSignals = getUseCaseSignals(page);
+const pitfalls = getUseCasePitfalls(page, proxyType);
+const questionLinks = getContentReferenceLinks(page);
+const competitorLinks = getCompetitorLinks(page);
 const relatedGuides = guides
   .filter(
     (guide) =>
@@ -46,11 +59,11 @@ const relatedGuides = guides
 const faqItems = [
   {
     question: `What proxy type works best for ${page.keyword}?`,
-    answer: `For ${page.keyword}, ${proxyType} proxies typically provide the best balance of success rate and stability.`,
+    answer: `For ${page.keyword}, ${proxyType} is usually the best starting point because ${useCaseInsight.providerRationale.toLowerCase()}`,
   },
   {
     question: `How do I reduce blocks when targeting ${page.keyword}?`,
-    answer: `Rotate IPs, add realistic headers, slow request rates, and use sticky sessions for login-heavy flows.`,
+    answer: `Start with a small pilot, slow request rates, realistic headers, and sticky sessions where the workflow crosses logins, carts, or multi-step pages.`,
   },
   {
     question: `Should I use rotating or sticky sessions for ${page.keyword}?`,
@@ -183,16 +196,24 @@ const jsonLd = [
           </div>
 
           <div class="card">
-            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Recommended proxy type</h2>
-            <p class="text-secondary-600 mb-4">
-              Based on the target, intent, and common block patterns, <strong class="capitalize"
-                >{proxyType}</strong
-              > proxies provide the best success rate for <strong>{page.keyword}</strong>.
-            </p>
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">{useCaseInsight.title}</h2>
+            <p class="text-secondary-600 mb-4">{useCaseInsight.summary}</p>
             <ul class="space-y-2 text-secondary-600">
-              <li>• Rotate IPs for discovery, use sticky sessions for logins and carts.</li>
-              <li>• Keep concurrency conservative and scale gradually.</li>
-              <li>• Monitor block pages and retry with exponential backoff.</li>
+              {useCaseInsight.checklist.map((item) => (
+                <li>• {item}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">What makes this use case hard</h2>
+            <ul class="space-y-3 text-secondary-600">
+              {pageSignals.map((item) => (
+                <li class="flex items-start gap-2">
+                  <span class="text-primary-600 mt-1">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -203,6 +224,74 @@ const jsonLd = [
               <li>Configure rotation rules and session length in your proxy manager.</li>
               <li>Throttle requests, randomize headers, and validate responses.</li>
             </ol>
+          </div>
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Decision guide</h2>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm text-left">
+                <thead>
+                  <tr class="border-b border-secondary-200 text-secondary-500">
+                    <th class="py-2 pr-4 font-medium">Decision point</th>
+                    <th class="py-2 pr-4 font-medium">Recommendation</th>
+                    <th class="py-2 font-medium">Why</th>
+                  </tr>
+                </thead>
+                <tbody class="text-secondary-700">
+                  <tr class="border-b border-secondary-100">
+                    <td class="py-3 pr-4">Initial access layer</td>
+                    <td class="py-3 pr-4 capitalize">{proxyType}</td>
+                    <td class="py-3">{useCaseInsight.providerRationale}</td>
+                  </tr>
+                  <tr class="border-b border-secondary-100">
+                    <td class="py-3 pr-4">Session handling</td>
+                    <td class="py-3 pr-4">Sticky sessions for multi-step flows</td>
+                    <td class="py-3">Use stickiness for logins, carts, and accounts; rotate harder during discovery or pagination work.</td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 pr-4">Scale trigger</td>
+                    <td class="py-3 pr-4">Expand only after a pilot</td>
+                    <td class="py-3">Scale after success rate, latency, and cost per usable record are stable on the target.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {
+            useCaseInsight.scraperAlternative && (
+              <div class="card bg-gradient-to-br from-primary-50 to-white">
+                <h2 class="text-2xl font-bold text-secondary-900 mb-4">
+                  {useCaseInsight.scraperAlternative.title}
+                </h2>
+                <p class="text-secondary-600 mb-4">
+                  {useCaseInsight.scraperAlternative.summary}
+                </p>
+                <ul class="space-y-3 text-secondary-600 mb-6">
+                  {useCaseInsight.scraperAlternative.bullets.map((item) => (
+                    <li class="flex items-start gap-2">
+                      <span class="text-primary-600 mt-1">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href={useCaseInsight.scraperAlternative.ctaHref} class="btn-primary">
+                  {useCaseInsight.scraperAlternative.ctaLabel}
+                </a>
+              </div>
+            )
+          }
+
+          <div class="card">
+            <h2 class="text-2xl font-bold text-secondary-900 mb-4">Common failure modes</h2>
+            <ul class="space-y-3 text-secondary-600">
+              {pitfalls.map((item) => (
+                <li class="flex items-start gap-2">
+                  <span class="text-primary-600 mt-1">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div class="card">
@@ -225,15 +314,49 @@ const jsonLd = [
             <div class="card">
               <h2 class="font-semibold text-secondary-900 mb-3">Recommended providers</h2>
               <p class="text-sm text-secondary-600 mb-4">
-                Curated options based on proxy type and coverage. Affiliate links disclosed.
+                Curated options based on proxy type and coverage. Internal research comes first; affiliate links are a secondary CTA.
               </p>
+              <AffiliateDisclosure variant="inline" />
               <div class="grid gap-4">
                 {providers.map((provider) => <AffiliateProviderCard provider={provider} />)}
               </div>
-              <p class="text-xs text-secondary-500 mt-4">
-                Affiliate disclosure: we may earn a commission at no extra cost to you.
-              </p>
             </div>
+
+            {
+              competitorLinks.length > 0 && (
+                <div class="card">
+                  <h2 class="font-semibold text-secondary-900 mb-3">Compare providers</h2>
+                  <div class="space-y-2">
+                    {competitorLinks.map((item) => (
+                      <a
+                        href={item.href}
+                        class="block rounded-lg px-3 py-2 text-sm text-secondary-600 hover:bg-secondary-50 hover:text-primary-600"
+                      >
+                        {item.label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+
+            {
+              questionLinks.length > 0 && (
+                <div class="card">
+                  <h2 class="font-semibold text-secondary-900 mb-3">Related questions</h2>
+                  <div class="space-y-2">
+                    {questionLinks.map((item) => (
+                      <a
+                        href={item.href}
+                        class="block rounded-lg px-3 py-2 text-sm text-secondary-600 hover:bg-secondary-50 hover:text-primary-600"
+                      >
+                        {item.label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
 
             <div class="card">
               <h2 class="font-semibold text-secondary-900 mb-3">Related use cases</h2>
