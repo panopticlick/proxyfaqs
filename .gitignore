@@ -49,7 +49,8 @@ docs/
 output/
 front/
 functions_legacy/
-data/
+data/*
+!data/proxy_clusters_2026-01-05.csv
 *.generated.json
 article*.json
 proxyfaqs_*.json
